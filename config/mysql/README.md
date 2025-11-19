@@ -22,7 +22,7 @@ Django prefixes tables with app name:
    - Triggers
    - Views
    - Complex queries
-3. Both work on same database: `organ_donation_db`
+3. Both work on same database: `organ_donation_and_transplant_db`
 
 ## Folder Structure
 
@@ -35,13 +35,13 @@ Django prefixes tables with app name:
 ## How to Use
 
 1. Wait for Django developer to create tables (Day 2)
-2. Connect to `organ_donation_db` in MySQL Workbench
+2. Connect to `organ_donation_and_transplant_db` in MySQL Workbench
 3. Run your SQL scripts to add procedures/triggers/views
 4. Test using Django admin or custom views
 
 ## Connection Info
 
-- Database: `organ_donation_db`
+- Database: `organ_donation_and_transplant_db`
 - Host: `localhost`
 - Port: `3306`
 - User: `root` (or your MySQL user)

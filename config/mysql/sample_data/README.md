@@ -9,7 +9,7 @@
 
 ## How to Load
 ```sql
-USE organ_donation_db;
+USE organ_donation_and_transplant_db;
 
 -- Load in order
 SOURCE sample_data/01_sample_donors.sql;

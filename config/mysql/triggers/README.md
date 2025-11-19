@@ -28,7 +28,7 @@
 
 ## Template
 ```sql
-USE organ_donation_db;
+USE organ_donation_and_transplant_db;
 
 DROP TRIGGER IF EXISTS trigger_name;
 
