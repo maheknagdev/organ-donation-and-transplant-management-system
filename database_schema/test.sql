@@ -79,3 +79,70 @@ SELECT CalculateCompatibilityScore(999, 1, 'Kidney');
 -- Test with non-existent recipient
 SELECT CalculateCompatibilityScore(1, 999, 'Kidney');
 -- Should return 0
+
+-- Test with a recent organ (should be Normal or Urgent)
+CALL CheckOrganViability(1);
+-- Should show: Organ_ID, Remaining_Hours, Urgency_Level
+
+-- Test with an old/expired organ
+CALL CheckOrganViability(2);
+-- Should show: Expired if hours < 0
+
+-- Test with non-existent organ
+CALL CheckOrganViability(999);
+-- Should show: -999 hours, Expired
+
+-- Check current waitlist
+SELECT * FROM Recipient_Waitlist;
+
+-- Test the procedure (use actual Recipient_ID and Type_Name from your waitlist)
+CALL CalculatePriorityScore(1, 'Kidney');
+
+SELECT Recipient_ID, Type_Name, Priority_Score, Wait_List_Date
+FROM Recipient_Waitlist
+WHERE Recipient_ID = 1;
+
+-- Test with high urgency recipient (if you have one)
+-- First update urgency to 5
+UPDATE Recipient SET Medical_Urgency_Level = 5 WHERE Recipient_ID = 1;
+
+-- Recalculate priority
+CALL CalculatePriorityScore(1, 'Kidney');
+-- Should see higher score now (urgency_points = 40)
+
+-- Check updated score
+SELECT Priority_Score FROM Recipient_Waitlist WHERE Recipient_ID = 1;
+
+-- Test successful allocation (use actual Organ_ID and Recipient_ID)
+CALL AllocateOrgan(1, 1);
+
+-- Check available organs
+SELECT Organ_ID, Type_Name, Status FROM Organ WHERE Status = 'Available';
+
+-- Check waitlist for that organ type (e.g., Kidney)
+SELECT r.Recipient_ID, r.Name, r.Blood_Type, wl.Priority_Score
+FROM Recipient r
+JOIN Recipient_Waitlist wl ON r.Recipient_ID = wl.Recipient_ID
+WHERE wl.Type_Name = 'Kidney' AND wl.Status = 'Waiting';
+
+-- If you need more test recipients, add them:
+INSERT INTO Recipient (Name, Date_of_Birth, Blood_Type, Gender, Medical_Urgency_Level, Registration_Date, Status)
+VALUES 
+('Patient A', '1970-05-10', 'A+', 'F', 5, '2024-09-01', 'Waiting'),
+('Patient B', '1985-03-15', 'O+', 'M', 3, '2024-08-01', 'Waiting'),
+('Patient C', '1965-11-20', 'A+', 'M', 4, '2024-07-01', 'Waiting');
+
+-- Add them to waitlist
+INSERT INTO Recipient_Waitlist (Recipient_ID, Type_Name, Wait_List_Date, Status, Priority_Score)
+VALUES 
+(4 - 2, 'Kidney', '2024-09-01', 'Waiting', 0),
+(4 - 1, 'Kidney', '2024-08-01', 'Waiting', 0),
+(4, 'Kidney', '2024-07-01', 'Waiting', 0);
+
+CALL MatchOrganToRecipients(1);
+-- Test with a Heart (if you have one available)
+CALL MatchOrganToRecipients(2);
+
+-- Test with non-existent organ
+CALL MatchOrganToRecipients(999);
+-- Should return: "Error: Organ not found"
