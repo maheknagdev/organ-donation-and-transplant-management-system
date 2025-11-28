@@ -146,3 +146,8 @@ CALL MatchOrganToRecipients(2);
 -- Test with non-existent organ
 CALL MatchOrganToRecipients(999);
 -- Should return: "Error: Organ not found"
+
+-- Use a valid donor that exists and has clearance
+INSERT INTO Organ (Type_Name, Donor_ID, Procurement_Date, Procurement_Time, Status)
+VALUES ('Kidney', 1, CURDATE(), CURTIME(), 'Available');
+-- Should work if Donor 1 has Status='Deceased' and Medical_Clearance_Date is set
