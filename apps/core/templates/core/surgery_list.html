@@ -1,0 +1,60 @@
+{% extends 'core/base.html' %}
+{% block title %}Surgeries{% endblock %}
+{% block content %}
+<style>
+    .action-bar { display: flex; justify-content: space-between; margin-bottom: 20px; }
+    .btn { padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #667eea; color: white; }
+    tr:hover { background: #f5f5f5; }
+    .outcome-success { color: #155724; font-weight: bold; }
+    .outcome-complications { color: #856404; font-weight: bold; }
+    .outcome-failed { color: #721c24; font-weight: bold; }
+</style>
+
+{% if messages %}
+    {% for message in messages %}
+        <div style="padding: 15px; background: #d4edda; color: #155724; border-radius: 5px; margin-bottom: 20px;">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="action-bar">
+    <h2>🏥 Surgery Records</h2>
+    <a href="{% url 'core:create_surgery' %}" class="btn">+ Schedule Surgery</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Date</th>
+            <th>Recipient</th>
+            <th>Organ</th>
+            <th>Hospital</th>
+            <th>Surgeon</th>
+            <th>Duration</th>
+            <th>Outcome</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for surgery in surgeries %}
+        <tr>
+            <td>{{ surgery.surgery_id }}</td>
+            <td>{{ surgery.surgery_date }}</td>
+            <td>{{ surgery.recipient.name }}</td>
+            <td>{{ surgery.organ.type_name.type_name }}</td>
+            <td>{{ surgery.hospital.name }}</td>
+            <td>{{ surgery.primary_surgeon.name }}</td>
+            <td>{{ surgery.duration_hours|default:"-" }} hrs</td>
+            <td class="outcome-{{ surgery.outcome|lower }}">{{ surgery.outcome }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" style="text-align: center; padding: 40px;">No surgeries recorded</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

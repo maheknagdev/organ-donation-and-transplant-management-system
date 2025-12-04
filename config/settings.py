@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'apps.core',
 ]
 
 MIDDLEWARE = [
@@ -75,7 +76,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'organ_donation_and_transplant_db',
+        'NAME': 'organ_donation_db',
         'USER': 'root',  # Your MySQL username
         'PASSWORD': 'mahek2310',  # Your MySQL password
         'HOST': 'localhost',

@@ -1,0 +1,288 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Match Organ #{{ organ.organ_id }} - Organ Donation System{% endblock %}
+
+{% block content %}
+<style>
+    .back-link {
+        display: inline-block;
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+        margin-bottom: 20px;
+    }
+    
+    .back-link:hover {
+        color: #764ba2;
+    }
+    
+    .organ-info {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+    }
+    
+    .organ-info h2 {
+        color: white;
+        border: none;
+        margin: 0 0 15px 0;
+        padding: 0;
+    }
+    
+    .organ-details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .info-item {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 12px;
+        border-radius: 8px;
+    }
+    
+    .info-label {
+        font-size: 0.85em;
+        opacity: 0.9;
+        margin-bottom: 5px;
+    }
+    
+    .info-value {
+        font-size: 1.1em;
+        font-weight: bold;
+    }
+    
+    .matches-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+    }
+    
+    .match-count {
+        background: #667eea;
+        color: white;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-weight: bold;
+    }
+    
+    .matches-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .matches-table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .matches-table th {
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+    }
+    
+    .matches-table td {
+        padding: 15px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .matches-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .rank-badge {
+        display: inline-block;
+        width: 35px;
+        height: 35px;
+        line-height: 35px;
+        text-align: center;
+        border-radius: 50%;
+        font-weight: bold;
+        color: white;
+    }
+    
+    .rank-1 { background: #FFD700; color: #333; }
+    .rank-2 { background: #C0C0C0; color: #333; }
+    .rank-3 { background: #CD7F32; color: white; }
+    .rank-other { background: #667eea; }
+    
+    .score-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .score-progress {
+        flex: 1;
+        height: 20px;
+        background: #e0e0e0;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .score-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #43e97b 0%, #38f9d7 100%);
+        transition: width 0.3s;
+    }
+    
+    .score-value {
+        font-weight: bold;
+        color: #667eea;
+        min-width: 50px;
+    }
+    
+    .urgency-badge {
+        padding: 5px 10px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: bold;
+    }
+    
+    .urgency-5 {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .urgency-4 {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .urgency-3 {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .urgency-2 {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .urgency-1 {
+        background: #e2e3e5;
+        color: #383d41;
+    }
+    
+    .no-matches {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+    
+    .breakdown-details {
+        font-size: 0.85em;
+        color: #666;
+        margin-top: 5px;
+    }
+</style>
+
+<a href="{% url 'core:available_organs' %}" class="back-link">← Back to Available Organs</a>
+
+<div class="organ-info">
+    <h2>🎯 Matching Results for Organ #{{ organ.organ_id }}</h2>
+    <div class="organ-details-grid">
+        <div class="info-item">
+            <div class="info-label">Organ Type</div>
+            <div class="info-value">{{ organ.type_name.type_name }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Donor</div>
+            <div class="info-value">{{ organ.donor.name }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Blood Type</div>
+            <div class="info-value">{{ organ.donor.blood_type }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Status</div>
+            <div class="info-value">{{ organ.status }}</div>
+        </div>
+        {% if organ.hla_type %}
+        <div class="info-item">
+            <div class="info-label">HLA Type</div>
+            <div class="info-value">{{ organ.hla_type }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="matches-header">
+    <h2>📋 Compatible Recipients (Ranked by Match Score)</h2>
+    <span class="match-count">{{ match_count }} Match{{ match_count|pluralize:"es" }} Found</span>
+</div>
+
+{% if matches %}
+<table class="matches-table">
+    <thead>
+        <tr>
+            <th>Rank</th>
+            <th>Recipient</th>
+            <th>Blood Type</th>
+            <th>Urgency</th>
+            <th>Days Waiting</th>
+            <th>Match Score</th>
+            <th>Score Breakdown</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for match in matches %}
+        <tr>
+            <td>
+                <span class="rank-badge rank-{% if forloop.counter <= 3 %}{{ forloop.counter }}{% else %}other{% endif %}">
+                    #{{ forloop.counter }}
+                </span>
+            </td>
+            <td>
+                <strong>{{ match.Recipient_Name }}</strong><br>
+                <small>ID: {{ match.Recipient_ID }}</small>
+            </td>
+            <td>
+                <strong>{{ match.Recipient_Blood }}</strong>
+            </td>
+            <td>
+                <span class="urgency-badge urgency-{{ match.Medical_Urgency_Level }}">
+                    Level {{ match.Medical_Urgency_Level }}
+                </span>
+            </td>
+            <td>
+                {{ match.Days_Waiting }} days
+            </td>
+            <td>
+                <div class="score-bar">
+                    <div class="score-progress">
+                        <div class="score-fill" style="width: {{ match.Total_Match_Score }}%"></div>
+                    </div>
+                    <span class="score-value">{{ match.Total_Match_Score|floatformat:1 }}</span>
+                </div>
+            </td>
+            <td>
+                <div class="breakdown-details">
+                    Blood: {{ match.Blood_Type_Score|floatformat:0 }} | 
+                    HLA: {{ match.HLA_Score|floatformat:0 }} | 
+                    Wait: {{ match.Wait_Time_Score|floatformat:0 }} | 
+                    Geo: {{ match.Geographic_Score|floatformat:0 }} | 
+                    Urg: {{ match.Urgency_Score|floatformat:0 }}
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="no-matches">
+    <h3>No compatible recipients found</h3>
+    <p>There are no recipients on the waitlist that match this organ's criteria.</p>
+</div>
+{% endif %}
+
+{% endblock %}

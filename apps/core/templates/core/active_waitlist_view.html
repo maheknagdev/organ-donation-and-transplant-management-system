@@ -1,0 +1,54 @@
+{% extends 'core/base.html' %}
+{% block title %}Active Waitlist (MySQL View){% endblock %}
+{% block content %}
+<style>
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; background: white; font-size: 0.9em; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #667eea; color: white; }
+    tr:hover { background: #f5f5f5; }
+    .view-note { background: #d1ecf1; padding: 15px; border-radius: 5px; margin-bottom: 20px; color: #0c5460; }
+</style>
+
+<a href="{% url 'core:waitlist' %}" class="back-link">← Back to Regular Waitlist</a>
+
+<h2>📋 Active Waitlist</h2>
+
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Blood</th>
+            <th>Urgency</th>
+            <th>Organ Needed</th>
+            <th>Priority Score</th>
+            <th>Wait Date</th>
+            <th>Days Waiting</th>
+            <th>MELD</th>
+            <th>CPRA</th>
+            <th>Category</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in waitlist %}
+        <tr>
+            <td>{{ entry.Recipient_ID }}</td>
+            <td><strong>{{ entry.Recipient_Name }}</strong></td>
+            <td>{{ entry.Blood_Type }}</td>
+            <td>{{ entry.Medical_Urgency_Level }}</td>
+            <td>{{ entry.Organ_Type_Needed }}</td>
+            <td><strong>{{ entry.Priority_Score|floatformat:1 }}</strong></td>
+            <td>{{ entry.Wait_List_Date }}</td>
+            <td>{{ entry.Days_Waiting }}</td>
+            <td>{{ entry.MELD_Score|default:"-" }}</td>
+            <td>{{ entry.CPRA_Score|default:"-" }}</td>
+            <td>{{ entry.Urgency_Category }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="11" style="text-align: center; padding: 40px;">No active waitlist</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

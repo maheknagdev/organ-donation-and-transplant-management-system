@@ -1,0 +1,260 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Dashboard - Organ Donation System{% endblock %}
+
+{% block content %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card h3 {
+        font-size: 0.9em;
+        opacity: 0.9;
+        margin-bottom: 10px;
+    }
+    
+    .stat-card .number {
+        font-size: 2.5em;
+        font-weight: bold;
+    }
+    
+    .organ-types {
+        margin-top: 30px;
+    }
+    
+    .organ-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .organ-item {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+    }
+    
+    .organ-item strong {
+        color: #667eea;
+        display: block;
+        margin-bottom: 5px;
+    }
+    
+    h2 {
+        color: #333;
+        margin-top: 30px;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #667eea;
+    }
+</style>
+
+<h2>📊 System Overview</h2>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Total Donors</h3>
+        <div class="number">{{ total_donors }}</div>
+    </div>
+    
+    <div class="stat-card">
+        <h3>Total Recipients</h3>
+        <div class="number">{{ total_recipients }}</div>
+    </div>
+    
+    <div class="stat-card">
+        <h3>Total Organs</h3>
+        <div class="number">{{ total_organs }}</div>
+    </div>
+    
+    <div class="stat-card">
+        <h3>Hospitals</h3>
+        <div class="number">{{ total_hospitals }}</div>
+    </div>
+    
+    <div class="stat-card">
+        <h3>Medical Staff</h3>
+        <div class="number">{{ total_staff }}</div>
+    </div>
+    
+    <div class="stat-card">
+        <h3>Surgeries Performed</h3>
+        <div class="number">{{ total_surgeries }}</div>
+    </div>
+</div>
+
+<h2>🚨 Current Status</h2>
+
+<div class="stats-grid">
+    <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <h3>Available Organs</h3>
+        <div class="number">{{ available_organs }}</div>
+    </div>
+    
+    <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+        <h3>Waiting Recipients</h3>
+        <div class="number">{{ waiting_recipients }}</div>
+    </div>
+    
+    <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+        <h3>Pending Allocations</h3>
+        <div class="number">{{ pending_allocations }}</div>
+    </div>
+    
+    <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+        <h3>Active Waitlist</h3>
+        <div class="number">{{ active_waitlist }}</div>
+    </div>
+</div>
+
+<h2>💊 Organ Types in System</h2>
+
+<div class="organ-list">
+    {% for organ_type in organ_types %}
+    <div class="organ-item">
+        <strong>{{ organ_type.type_name }}</strong>
+        <small>Viability: {{ organ_type.typical_viability_hours }} hours</small>
+    </div>
+    {% empty %}
+    <p>No organ types configured.</p>
+    {% endfor %}
+</div>
+
+<h2>🎯 Quick Actions</h2>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 20px;">
+    
+    {# All users can view these #}
+    <a href="{% url 'core:available_organs' %}" style="background: #667eea; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
+        <div style="font-size: 2em;">💊</div>
+        <div style="margin-top: 10px;">Available Organs</div>
+    </a>
+    
+    <a href="{% url 'core:waitlist' %}" style="background: #43e97b; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
+        <div style="font-size: 2em;">📋</div>
+        <div style="margin-top: 10px;">Waitlist</div>
+    </a>
+    
+    {# Recipient-specific actions #}
+    {% if request.session.role == 'Recipient' %}
+        {% if my_recipient %}
+        <a href="{% url 'core:recipient_history' my_recipient.recipient_id %}" style="background: #f093fb; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
+            <div style="font-size: 2em;">📖</div>
+            <div style="margin-top: 10px;">My History</div>
+        </a>
+        {% endif %}
+        
+        <a href="{% url 'core:allocation_list' %}" style="background: #fa709a; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
+            <div style="font-size: 2em;">📬</div>
+            <div style="margin-top: 10px;">My Offers</div>
+        </a>
+    {% endif %}
+    
+    {# Medical Staff and Admin only #}
+    {% if request.session.role == 'Medical_Staff' or request.session.role == 'Administrator' %}
+        <a href="{% url 'core:create_organ' %}" style="background: #30cfd0; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
+            <div style="font-size: 2em;">➕</div>
+            <div style="margin-top: 10px;">Record Organ</div>
+        </a>
+        
+        <a href="{% url 'core:create_surgery' %}" style="background: #a8edea; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
+            <div style="font-size: 2em;">🏥</div>
+            <div style="margin-top: 10px;">Schedule Surgery</div>
+        </a>
+    {% endif %}
+    
+    {# Coordinator and Admin only #}
+    {% if request.session.role == 'Coordinator' or request.session.role == 'Administrator' %}
+        <a href="{% url 'core:create_donor' %}" style="background: #ff9a9e; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
+            <div style="font-size: 2em;">👥</div>
+            <div style="margin-top: 10px;">Register Donor</div>
+        </a>
+        
+        <a href="{% url 'core:create_recipient' %}" style="background: #fecfef; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
+            <div style="font-size: 2em;">🧍</div>
+            <div style="margin-top: 10px;">Register Recipient</div>
+        </a>
+        
+        <a href="{% url 'core:add_to_waitlist' %}" style="background: #fee140; color: #333; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
+            <div style="font-size: 2em;">📝</div>
+            <div style="margin-top: 10px;">Add to Waitlist</div>
+        </a>
+    {% endif %}
+    
+    {# Staff, Coordinator, Admin only #}
+    {% if request.session.role != 'Recipient' %}
+        <a href="{% url 'core:active_waitlist_mysql_view' %}" style="background: #667eea; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
+            <div style="font-size: 2em;">📊</div>
+            <div style="margin-top: 10px;">MySQL Waitlist View</div>
+        </a>
+        
+        <a href="{% url 'core:critical_recipients' %}" style="background: #dc3545; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
+            <div style="font-size: 2em;">🚨</div>
+            <div style="margin-top: 10px;">Critical Patients</div>
+        </a>
+        
+        <a href="{% url 'core:upcoming_followups' %}" style="background: #28a745; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
+            <div style="font-size: 2em;">📅</div>
+            <div style="margin-top: 10px;">Upcoming Follow-ups</div>
+        </a>
+        
+        <a href="{% url 'core:waiting_time_analysis' %}" style="background: #17a2b8; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
+            <div style="font-size: 2em;">⏳</div>
+            <div style="margin-top: 10px;">Wait Time Analysis</div>
+        </a>
+    {% endif %}
+</div>
+
+{# Recipient-specific dashboard section #}
+{% if request.session.role == 'Recipient' and my_recipient %}
+<h2 style="margin-top: 40px;">👤 My Information</h2>
+
+<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+    <h3>Personal Details</h3>
+    <p><strong>Name:</strong> {{ my_recipient.name }}</p>
+    <p><strong>Blood Type:</strong> {{ my_recipient.blood_type }}</p>
+    <p><strong>Status:</strong> {{ my_recipient.status }}</p>
+    <p><strong>Urgency Level:</strong> {{ my_recipient.medical_urgency_level }}</p>
+</div>
+
+{% if my_waitlist %}
+<div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+    <h3>⏳ My Waitlist Status</h3>
+    {% for entry in my_waitlist %}
+    <p>
+        <strong>{{ entry.type_name.type_name }}:</strong> 
+        Priority Score: {{ entry.priority_score }} | 
+        Waiting since: {{ entry.wait_list_date }}
+    </p>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if my_allocations %}
+<div style="background: #d4edda; padding: 20px; border-radius: 8px;">
+    <h3>📬 Pending Organ Offers</h3>
+    {% for alloc in my_allocations %}
+    <p>
+        <strong>{{ alloc.organ.type_name.type_name }}</strong> (Match Score: {{ alloc.match_score }}) - 
+        <a href="{% url 'core:respond_to_allocation' alloc.allocation_id %}">Respond Now</a>
+    </p>
+    {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+
+{% endblock %}

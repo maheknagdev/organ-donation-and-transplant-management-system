@@ -1,0 +1,42 @@
+{% extends 'core/base.html' %}
+{% block title %}Update Organ Status{% endblock %}
+{% block content %}
+<style>
+    form { max-width: 600px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+    select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    .btn { padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background: #764ba2; }
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+    .info-box { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+</style>
+
+<a href="{% url 'core:available_organs' %}" class="back-link">← Back to Available Organs</a>
+
+<h2>Update Organ Status</h2>
+
+<div class="info-box">
+    <strong>Organ ID:</strong> {{ organ.organ_id }}<br>
+    <strong>Type:</strong> {{ organ.type_name.type_name }}<br>
+    <strong>Donor:</strong> {{ organ.donor.name }}<br>
+    <strong>Blood Type:</strong> {{ organ.donor.blood_type }}<br>
+    <strong>Current Status:</strong> {{ organ.status }}
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="form-group">
+        <label>New Status *</label>
+        <select name="status" required>
+            <option value="Available" {% if organ.status == 'Available' %}selected{% endif %}>Available</option>
+            <option value="Allocated" {% if organ.status == 'Allocated' %}selected{% endif %}>Allocated</option>
+            <option value="Transplanted" {% if organ.status == 'Transplanted' %}selected{% endif %}>Transplanted</option>
+            <option value="Expired" {% if organ.status == 'Expired' %}selected{% endif %}>Expired</option>
+        </select>
+    </div>
+    
+    <button type="submit" class="btn">Update Status</button>
+</form>
+{% endblock %}

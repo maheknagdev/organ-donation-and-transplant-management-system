@@ -1,0 +1,56 @@
+{% extends 'core/base.html' %}
+{% block title %}Upcoming Follow-ups{% endblock %}
+{% block content %}
+<style>
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; background: white; font-size: 0.85em; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #667eea; color: white; }
+    tr:hover { background: #f5f5f5; }
+    .view-note { background: #d1ecf1; padding: 15px; border-radius: 5px; margin-bottom: 20px; color: #0c5460; }
+    .urgency-today { background: #f8d7da; color: #721c24; padding: 5px 10px; border-radius: 12px; font-weight: bold; }
+    .urgency-tomorrow { background: #fff3cd; color: #856404; padding: 5px 10px; border-radius: 12px; }
+</style>
+
+<a href="/" class="back-link">← Back to Dashboard</a>
+
+<h2>📅 Upcoming Follow-up Appointments (Next 30 Days)</h2>
+
+<div class="view-note">
+    <strong>✓ MySQL VIEW Used:</strong> Upcoming_Follow_Ups<br>
+    This view shows appointments auto-created by the <strong>after_surgery_insert</strong> trigger.
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Appt ID</th>
+            <th>Date/Time</th>
+            <th>Recipient</th>
+            <th>Organ</th>
+            <th>Days Since Surgery</th>
+            <th>Staff</th>
+            <th>Urgency</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for appt in followups %}
+        <tr>
+            <td>{{ appt.Appointment_ID }}</td>
+            <td>{{ appt.Appointment_Date }} {{ appt.Appointment_Time }}</td>
+            <td><strong>{{ appt.Recipient_Name }}</strong></td>
+            <td>{{ appt.Transplanted_Organ }}</td>
+            <td>{{ appt.Days_Since_Surgery }} days</td>
+            <td>{{ appt.Staff_Name }}</td>
+            <td>
+                <span class="urgency-{{ appt.Appointment_Urgency|lower|cut:' ' }}">
+                    {{ appt.Appointment_Urgency }}
+                </span>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align: center; padding: 40px;">No upcoming appointments</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

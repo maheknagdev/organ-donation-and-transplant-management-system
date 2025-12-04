@@ -1,0 +1,91 @@
+{% extends 'core/base.html' %}
+{% block title %}Schedule Surgery{% endblock %}
+{% block content %}
+<style>
+    form { max-width: 600px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    .btn { padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background: #764ba2; }
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+    .alert { background: #fff3cd; padding: 15px; border-radius: 5px; margin-bottom: 20px; color: #856404; }
+</style>
+
+<a href="{% url 'core:surgery_list' %}" class="back-link">← Back to Surgeries</a>
+
+<h2>🏥 Schedule Surgery</h2>
+
+{% if messages %}
+    {% for message in messages %}
+        <div style="padding: 15px; background: {% if 'success' in message.tags %}#d4edda{% else %}#f8d7da{% endif %}; 
+                    color: {% if 'success' in message.tags %}#155724{% else %}#721c24{% endif %}; 
+                    border-radius: 5px; margin-bottom: 20px;">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="form-group">
+        <label>Hospital *</label>
+        <select name="hospital_id" required>
+            <option value="">Select Hospital</option>
+            {% for hospital in hospitals %}
+            <option value="{{ hospital.hospital_id }}">{{ hospital.name }} - {{ hospital.city }}, {{ hospital.state }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Organ (Allocated) *</label>
+        <select name="organ_id" required>
+            <option value="">Select Organ</option>
+            {% for organ in organs %}
+            <option value="{{ organ.organ_id }}">
+                {{ organ.type_name.type_name }} #{{ organ.organ_id }} - Donor: {{ organ.donor.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Recipient *</label>
+        <select name="recipient_id" required>
+            <option value="">Select Recipient</option>
+            {% for recipient in recipients %}
+            <option value="{{ recipient.recipient_id }}">{{ recipient.name }} ({{ recipient.blood_type }})</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Primary Surgeon *</label>
+        <select name="surgeon_id" required>
+            <option value="">Select Surgeon</option>
+            {% for surgeon in surgeons %}
+            <option value="{{ surgeon.staff_id }}">{{ surgeon.name }} - {{ surgeon.hospital.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Surgery Date *</label>
+        <input type="date" name="surgery_date" required>
+    </div>
+    
+    <div class="form-group">
+        <label>Surgery Time *</label>
+        <input type="time" name="surgery_time" required>
+    </div>
+    
+    <div class="form-group">
+        <label>Notes</label>
+        <textarea name="notes" rows="3"></textarea>
+    </div>
+    
+    <button type="submit" class="btn">Schedule Surgery</button>
+</form>
+{% endblock %}

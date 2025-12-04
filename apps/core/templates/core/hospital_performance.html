@@ -1,0 +1,52 @@
+{% extends 'core/base.html' %}
+{% block title %}Hospital Performance Report{% endblock %}
+{% block content %}
+<style>
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #667eea; color: white; }
+    tr:hover { background: #f5f5f5; }
+    .success-rate { font-weight: bold; }
+    .rate-high { color: #155724; }
+    .rate-medium { color: #856404; }
+    .rate-low { color: #721c24; }
+</style>
+
+<a href="/" class="back-link">← Back to Dashboard</a>
+
+<h2>🏥 Hospital Performance Report</h2>
+<p style="color: #666; margin-bottom: 20px;">Transplant success rates by hospital</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Hospital</th>
+            <th>Location</th>
+            <th>Total Surgeries</th>
+            <th>Successful</th>
+            <th>Success Rate</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for hospital in hospitals %}
+        <tr>
+            <td><strong>{{ hospital.Hospital_Name }}</strong></td>
+            <td>{{ hospital.City }}, {{ hospital.State }}</td>
+            <td>{{ hospital.Total_Surgeries }}</td>
+            <td>{{ hospital.Successful_Surgeries }}</td>
+            <td>
+                <span class="success-rate 
+                    {% if hospital.Success_Rate >= 80 %}rate-high
+                    {% elif hospital.Success_Rate >= 60 %}rate-medium
+                    {% else %}rate-low{% endif %}">
+                    {{ hospital.Success_Rate }}%
+                </span>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align: center; padding: 40px;">No hospital data available</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

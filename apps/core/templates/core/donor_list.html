@@ -1,0 +1,63 @@
+{% extends 'core/base.html' %}
+{% block title %}Donors - Organ Donation System{% endblock %}
+{% block content %}
+<style>
+    .action-bar { display: flex; justify-content: space-between; margin-bottom: 20px; }
+    .btn { padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; }
+    .btn:hover { background: #764ba2; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #667eea; color: white; }
+    tr:hover { background: #f5f5f5; }
+    .badge { padding: 5px 10px; border-radius: 12px; font-size: 0.85em; }
+    .badge-active { background: #d4edda; color: #155724; }
+    .badge-deceased { background: #d6d8db; color: #383d41; }
+    .badge-inactive { background: #fff3cd; color: #856404; }
+</style>
+
+{% if messages %}
+    {% for message in messages %}
+        <div style="padding: 15px; background: #d4edda; color: #155724; border-radius: 5px; margin-bottom: 20px;">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="action-bar">
+    <h2>👥 Donors</h2>
+    <a href="{% url 'core:create_donor' %}" class="btn">+ Register New Donor</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Blood Type</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Registration Date</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for donor in donors %}
+        <tr>
+            <td>{{ donor.donor_id }}</td>
+            <td><strong>{{ donor.name }}</strong></td>
+            <td>{{ donor.blood_type }}</td>
+            <td>{{ donor.donor_type }}</td>
+            <td>
+                <span class="badge badge-{{ donor.status|lower }}">{{ donor.status }}</span>
+            </td>
+            <td>{{ donor.registration_date }}</td>
+            <td>
+                <a href="{% url 'core:update_donor' donor.donor_id %}" style="color: #667eea;">Edit</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align: center; padding: 40px;">No donors registered</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

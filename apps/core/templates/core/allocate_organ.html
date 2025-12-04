@@ -1,0 +1,64 @@
+{% extends 'core/base.html' %}
+{% block title %}Allocate Organ{% endblock %}
+{% block content %}
+<style>
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+    .organ-info { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; margin-bottom: 30px; }
+    .organ-info h2 { color: white; border: none; margin: 0 0 15px 0; }
+    .recipient-card { background: white; border: 2px solid #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 15px; cursor: pointer; transition: all 0.3s; }
+    .recipient-card:hover { border-color: #667eea; box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2); }
+    .recipient-card input[type="radio"] { margin-right: 15px; }
+    .score-badge { background: #43e97b; color: white; padding: 8px 15px; border-radius: 20px; font-weight: bold; }
+    .btn { padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; }
+    .btn:hover { background: #764ba2; }
+</style>
+
+<a href="{% url 'core:available_organs' %}" class="back-link">← Back to Available Organs</a>
+
+<div class="organ-info">
+    <h2>🎯 Allocate Organ #{{ organ.organ_id }}</h2>
+    <div>
+        <strong>Type:</strong> {{ organ.type_name.type_name }} | 
+        <strong>Donor:</strong> {{ organ.donor.name }} | 
+        <strong>Blood:</strong> {{ organ.donor.blood_type }}
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div style="padding: 15px; background: {% if 'success' in message.tags %}#d4edda{% else %}#f8d7da{% endif %}; 
+                    color: {% if 'success' in message.tags %}#155724{% else %}#721c24{% endif %}; 
+                    border-radius: 5px; margin-bottom: 20px;">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<h3 style="margin-bottom: 20px;">Select Recipient to Allocate:</h3>
+
+<form method="post">
+    {% csrf_token %}
+    
+    {% for recipient in potential_recipients %}
+    <label for="recipient_{{ recipient.Recipient_ID }}" style="cursor: pointer;">
+        <div class="recipient-card">
+            <input type="radio" name="recipient_id" value="{{ recipient.Recipient_ID }}" 
+                   id="recipient_{{ recipient.Recipient_ID }}" required>
+            <strong style="font-size: 1.2em;">{{ recipient.Recipient_Name }}</strong>
+            <span class="score-badge">Score: {{ recipient.Total_Match_Score|floatformat:1 }}</span>
+            <div style="margin-top: 10px; color: #666;">
+                Blood: {{ recipient.Recipient_Blood }} | 
+                Urgency: Level {{ recipient.Medical_Urgency_Level }} | 
+                Waiting: {{ recipient.Days_Waiting }} days
+            </div>
+        </div>
+    </label>
+    {% empty %}
+    <p style="text-align: center; padding: 40px; color: #666;">No compatible recipients found</p>
+    {% endfor %}
+    
+    {% if potential_recipients %}
+    <button type="submit" class="btn" style="margin-top: 20px;">Allocate Organ to Selected Recipient</button>
+    {% endif %}
+</form>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends 'core/base.html' %}
+{% block title %}Waitlist - Organ Donation System{% endblock %}
+{% block content %}
+<style>
+    .action-bar { display: flex; justify-content: space-between; margin-bottom: 20px; }
+    .btn { padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; }
+    .btn:hover { background: #764ba2; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #667eea; color: white; }
+    tr:hover { background: #f5f5f5; }
+    .priority-high { background: #f8d7da; color: #721c24; font-weight: bold; }
+    .priority-medium { background: #fff3cd; color: #856404; }
+    .priority-low { background: #d4edda; color: #155724; }
+    .remove-btn { color: #dc3545; text-decoration: none; font-weight: bold; }
+    .remove-btn:hover { color: #a71d2a; }
+    .calculate-btn { color: #667eea; text-decoration: none; font-weight: bold; }
+    .calculate-btn:hover { color: #764ba2; }
+</style>
+
+{% if messages %}
+    {% for message in messages %}
+        <div style="padding: 15px; background: #d4edda; color: #155724; border-radius: 5px; margin-bottom: 20px;">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="action-bar">
+    <h2>📋 Active Waitlist</h2>
+    <a href="{% url 'core:add_to_waitlist' %}" class="btn">+ Add to Waitlist</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Rank</th>
+            <th>Recipient</th>
+            <th>Blood Type</th>
+            <th>Organ Needed</th>
+            <th>Priority Score</th>
+            <th>Wait Date</th>
+            <th>MELD</th>
+            <th>CPRA</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in waitlist_entries %}
+        <tr>
+            <td><strong>#{{ forloop.counter }}</strong></td>
+            <td><strong>{{ entry.recipient.name }}</strong><br><small>ID: {{ entry.recipient.recipient_id }}</small></td>
+            <td>{{ entry.recipient.blood_type }}</td>
+            <td>{{ entry.type_name.type_name }}</td>
+            <td>
+                <span style="padding: 5px 10px; border-radius: 12px; 
+                    {% if entry.priority_score >= 70 %}background: #f8d7da; color: #721c24;
+                    {% elif entry.priority_score >= 40 %}background: #fff3cd; color: #856404;
+                    {% else %}background: #d4edda; color: #155724;{% endif %}">
+                    {{ entry.priority_score }}
+                </span>
+            </td>
+            <td>{{ entry.wait_list_date }}</td>
+            <td>{{ entry.meld_score|default:"-" }}</td>
+            <td>{{ entry.cpra_score|default:"-" }}</td>
+            <td>
+                {% if request.session.role == 'Medical_Staff' or request.session.role == 'Coordinator' or request.session.role == 'Administrator' %}
+                    <a href="{% url 'core:calculate_priority' entry.recipient.recipient_id entry.type_name.type_name %}" 
+                    class="calculate-btn">
+                        Priority Score
+                    </a>
+                {% endif %}
+                <a href="{% url 'core:remove_from_waitlist' entry.recipient.recipient_id entry.type_name.type_name %}" 
+                   class="remove-btn"
+                   onclick="return confirm('Remove {{ entry.recipient.name }} from waitlist?')">
+                    Remove
+                </a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" style="text-align: center; padding: 40px;">No recipients on waitlist</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

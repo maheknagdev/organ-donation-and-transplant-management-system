@@ -1,0 +1,73 @@
+{% extends 'core/base.html' %}
+{% block title %}Recipients - Organ Donation System{% endblock %}
+{% block content %}
+<style>
+    .action-bar { display: flex; justify-content: space-between; margin-bottom: 20px; }
+    .btn { padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; }
+    .btn:hover { background: #764ba2; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #667eea; color: white; }
+    tr:hover { background: #f5f5f5; }
+    .badge { padding: 5px 10px; border-radius: 12px; font-size: 0.85em; }
+    .badge-waiting { background: #fff3cd; color: #856404; }
+    .badge-transplanted { background: #d4edda; color: #155724; }
+    .badge-deceased { background: #d6d8db; color: #383d41; }
+    .urgency-5 { background: #f8d7da; color: #721c24; font-weight: bold; }
+    .urgency-4 { background: #fff3cd; color: #856404; }
+    .urgency-3 { background: #d1ecf1; color: #0c5460; }
+    .urgency-2 { background: #d4edda; color: #155724; }
+    .urgency-1 { background: #e2e3e5; color: #383d41; }
+</style>
+
+{% if messages %}
+    {% for message in messages %}
+        <div style="padding: 15px; background: #d4edda; color: #155724; border-radius: 5px; margin-bottom: 20px;">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="action-bar">
+    <h2>🏥 Recipients</h2>
+    <a href="{% url 'core:create_recipient' %}" class="btn">+ Register New Recipient</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Blood Type</th>
+            <th>Urgency</th>
+            <th>Status</th>
+            <th>Registration Date</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for recipient in recipients %}
+        <tr>
+            <td>{{ recipient.recipient_id }}</td>
+            <td><strong>{{ recipient.name }}</strong></td>
+            <td>{{ recipient.blood_type }}</td>
+            <td>
+                <span class="badge urgency-{{ recipient.medical_urgency_level }}">
+                    Level {{ recipient.medical_urgency_level }}
+                </span>
+            </td>
+            <td>
+                <span class="badge badge-{{ recipient.status|lower }}">{{ recipient.status }}</span>
+            </td>
+            <td>{{ recipient.registration_date }}</td>
+            <td>
+                <a href="{% url 'core:update_recipient' recipient.recipient_id %}" style="color: #667eea;">Edit</a> |
+                <a href="{% url 'core:recipient_history' recipient.recipient_id %}" style="color: #667eea;">History</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align: center; padding: 40px;">No recipients registered</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

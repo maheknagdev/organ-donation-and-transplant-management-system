@@ -1,0 +1,45 @@
+{% extends 'core/base.html' %}
+{% block title %}Organ Viability Check{% endblock %}
+{% block content %}
+<style>
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+    .organ-info { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+    .viability-result { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; text-align: center; }
+    .big-number { font-size: 4em; font-weight: bold; margin: 20px 0; }
+    .status-badge { display: inline-block; padding: 10px 25px; border-radius: 20px; font-weight: bold; font-size: 1.2em; margin-top: 20px; }
+    .status-normal { background: #28a745; }
+    .status-urgent { background: #ffc107; color: #333; }
+    .status-critical { background: #dc3545; }
+    .status-expired { background: #6c757d; }
+    .procedure-note { background: #d1ecf1; padding: 15px; border-radius: 5px; margin-top: 20px; color: #0c5460; }
+</style>
+
+<a href="{% url 'core:available_organs' %}" class="back-link">← Back to Available Organs</a>
+
+<h2>⏱️ Organ Viability Check</h2>
+
+<div class="organ-info">
+    <h3>Organ Details:</h3>
+    <p><strong>Organ ID:</strong> {{ organ.organ_id }}</p>
+    <p><strong>Type:</strong> {{ organ.type_name.type_name }}</p>
+    <p><strong>Donor:</strong> {{ organ.donor.name }}</p>
+    <p><strong>Blood Type:</strong> {{ organ.donor.blood_type }}</p>
+    <p><strong>Procurement:</strong> {{ organ.procurement_date }} at {{ organ.procurement_time }}</p>
+    <p><strong>Status:</strong> {{ organ.status }}</p>
+</div>
+
+{% if viability_data %}
+<div class="viability-result">
+    <h3>Viability Check Results</h3>
+    <div class="big-number">{{ viability_data.Remaining_Hours|floatformat:1 }}</div>
+    <p style="font-size: 1.2em;">Hours Remaining</p>
+    <span class="status-badge status-{{ viability_data.Urgency_Level|lower }}">
+        {{ viability_data.Urgency_Level }}
+    </span>
+</div>
+
+
+{% else %}
+<p>Unable to check viability</p>
+{% endif %}
+{% endblock %}

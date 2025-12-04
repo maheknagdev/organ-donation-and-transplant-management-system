@@ -1,0 +1,50 @@
+{% extends 'core/base.html' %}
+{% block title %}Update Donor{% endblock %}
+{% block content %}
+<style>
+    form { max-width: 600px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    .btn { padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background: #764ba2; }
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+    .info-box { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+</style>
+
+<a href="{% url 'core:donor_list' %}" class="back-link">← Back to Donors</a>
+
+<h2>Update Donor: {{ donor.name }}</h2>
+
+<div class="info-box">
+    <strong>Donor ID:</strong> {{ donor.donor_id }}<br>
+    <strong>Blood Type:</strong> {{ donor.blood_type }}<br>
+    <strong>Donor Type:</strong> {{ donor.donor_type }}<br>
+    <strong>Registration Date:</strong> {{ donor.registration_date }}
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="form-group">
+        <label>Status *</label>
+        <select name="status" required>
+            <option value="Active" {% if donor.status == 'Active' %}selected{% endif %}>Active</option>
+            <option value="Inactive" {% if donor.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+            <option value="Deceased" {% if donor.status == 'Deceased' %}selected{% endif %}>Deceased</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Contact Info *</label>
+        <textarea name="contact_info" rows="2" required>{{ donor.contact_info }}</textarea>
+    </div>
+    
+    <div class="form-group">
+        <label>Medical History</label>
+        <textarea name="medical_history" rows="4">{{ donor.medical_history }}</textarea>
+    </div>
+    
+    <button type="submit" class="btn">Update Donor</button>
+</form>
+{% endblock %}

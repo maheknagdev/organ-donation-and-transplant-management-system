@@ -1,0 +1,48 @@
+{% extends 'core/base.html' %}
+{% block title %}Waiting Time Analysis{% endblock %}
+{% block content %}
+<style>
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #667eea; color: white; }
+    tr:hover { background: #f5f5f5; }
+    .query-note { background: #d1ecf1; padding: 15px; border-radius: 5px; margin-bottom: 20px; color: #0c5460; }
+</style>
+
+<a href="{% url 'core:hospital_performance' %}" class="back-link">← Back to Reports</a>
+
+<h2>⏳ Waiting Time Analysis</h2>
+
+<div class="query-note">
+    <strong>✓ Complex Query Used:</strong> Average wait time by organ type and blood type<br>
+    <strong>✓ Function Used:</strong> CalculateWaitTimeDays() in aggregation
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Organ Type</th>
+            <th>Blood Type</th>
+            <th>Recipients</th>
+            <th>Avg Wait (Days)</th>
+            <th>Min Wait</th>
+            <th>Max Wait</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in wait_times %}
+        <tr>
+            <td><strong>{{ item.Organ_Type }}</strong></td>
+            <td>{{ item.Blood_Type }}</td>
+            <td>{{ item.Recipient_Count }}</td>
+            <td><strong>{{ item.Avg_Wait_Days|floatformat:0 }}</strong></td>
+            <td>{{ item.Min_Wait_Days }}</td>
+            <td>{{ item.Max_Wait_Days }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align: center; padding: 40px;">No waiting time data</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

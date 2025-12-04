@@ -1,5 +1,27 @@
--- Active wait list
-CREATE VIEW Active_Wait_List AS
+-- =====================================================
+-- FIXED: MySQL Views with Correct Naming
+-- =====================================================
+
+USE organ_donation_db;
+
+-- Drop any existing views
+DROP VIEW IF EXISTS active_wait_list;
+DROP VIEW IF EXISTS available_organs;
+DROP VIEW IF EXISTS transplant_success_rate_by_hospital;
+DROP VIEW IF EXISTS critical_recipients;
+DROP VIEW IF EXISTS upcoming_follow_ups;
+
+-- Also drop uppercase versions if they exist
+DROP VIEW IF EXISTS Active_Wait_List;
+DROP VIEW IF EXISTS Available_Organs;
+DROP VIEW IF EXISTS Transplant_Success_Rate_By_Hospital;
+DROP VIEW IF EXISTS Critical_Recipients;
+DROP VIEW IF EXISTS Upcoming_Follow_Ups;
+
+-- =====================================================
+-- VIEW 1: active_wait_list (lowercase)
+-- =====================================================
+CREATE VIEW active_wait_list AS
 SELECT 
     r.Recipient_ID,
     r.Name as Recipient_Name,
@@ -25,8 +47,10 @@ WHERE r.Status = 'Waiting'
   AND wl.Status = 'Waiting'
 ORDER BY wl.Priority_Score DESC, wl.Wait_List_Date ASC;
 
--- available organs
-CREATE VIEW Available_Organs AS
+-- =====================================================
+-- VIEW 2: available_organs (lowercase)
+-- =====================================================
+CREATE VIEW available_organs AS
 SELECT 
     o.Organ_ID,
     o.Type_Name as Organ_Type,
@@ -55,25 +79,23 @@ JOIN Organ_Type ot ON o.Type_Name = ot.Type_Name
 WHERE o.Status IN ('Available', 'Allocated')
 ORDER BY GetRemainingViableHours(o.Organ_ID) ASC;
 
--- Transplant Success Rate By Hospital
-CREATE VIEW Transplant_Success_Rate_By_Hospital AS
+-- =====================================================
+-- VIEW 3: transplant_success_rate_by_hospital (lowercase)
+-- =====================================================
+CREATE VIEW transplant_success_rate_by_hospital AS
 SELECT 
     h.Hospital_ID,
     h.Name as Hospital_Name,
     h.City,
     h.State,
     COUNT(s.Surgery_ID) as Total_Surgeries,
-    -- Count by outcome
     SUM(CASE WHEN s.Outcome = 'Success' THEN 1 ELSE 0 END) as Successful_Surgeries,
     SUM(CASE WHEN s.Outcome = 'Complications' THEN 1 ELSE 0 END) as Surgeries_With_Complications,
     SUM(CASE WHEN s.Outcome = 'Failed' THEN 1 ELSE 0 END) as Failed_Surgeries,
-    -- Calculate percentages
     ROUND((SUM(CASE WHEN s.Outcome = 'Success' THEN 1 ELSE 0 END) / COUNT(s.Surgery_ID)) * 100, 2) as Success_Rate_Percentage,
     ROUND((SUM(CASE WHEN s.Outcome = 'Complications' THEN 1 ELSE 0 END) / COUNT(s.Surgery_ID)) * 100, 2) as Complication_Rate_Percentage,
     ROUND((SUM(CASE WHEN s.Outcome = 'Failed' THEN 1 ELSE 0 END) / COUNT(s.Surgery_ID)) * 100, 2) as Failure_Rate_Percentage,
-    -- Average surgery duration
     ROUND(AVG(s.Duration_Hours), 2) as Avg_Surgery_Duration_Hours,
-    -- Date range
     MIN(s.Surgery_Date) as First_Surgery_Date,
     MAX(s.Surgery_Date) as Most_Recent_Surgery_Date
 FROM Hospital h
@@ -82,8 +104,10 @@ GROUP BY h.Hospital_ID, h.Name, h.City, h.State
 HAVING Total_Surgeries > 0
 ORDER BY Success_Rate_Percentage DESC, Total_Surgeries DESC;
 
--- critical recipients
-CREATE VIEW Critical_Recipients AS
+-- =====================================================
+-- VIEW 4: critical_recipients (lowercase)
+-- =====================================================
+CREATE VIEW critical_recipients AS
 SELECT 
     r.Recipient_ID,
     r.Name as Recipient_Name,
@@ -116,8 +140,10 @@ WHERE r.Status = 'Waiting'
   AND r.Medical_Urgency_Level >= 4
 ORDER BY r.Medical_Urgency_Level DESC, wl.Priority_Score DESC, wl.Wait_List_Date ASC;
 
--- upcoming follow up
-CREATE VIEW Upcoming_Follow_Ups AS
+-- =====================================================
+-- VIEW 5: upcoming_follow_ups (lowercase)
+-- =====================================================
+CREATE VIEW upcoming_follow_ups AS
 SELECT 
     fa.Appointment_ID,
     fa.Appointment_Date,

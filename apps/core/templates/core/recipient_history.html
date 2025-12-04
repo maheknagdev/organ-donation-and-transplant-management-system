@@ -1,0 +1,91 @@
+{% extends 'core/base.html' %}
+{% block title %}Recipient History{% endblock %}
+{% block content %}
+<style>
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+    .info-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; margin-bottom: 30px; }
+    .section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h3 { color: #667eea; margin-bottom: 15px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #f8f9fa; font-weight: 600; }
+    .no-data { text-align: center; padding: 30px; color: #666; }
+</style>
+
+<a href="{% url 'core:recipient_list' %}" class="back-link">← Back to Recipients</a>
+
+<div class="info-box">
+    <h2>📋 Transplant History: {{ recipient.name }}</h2>
+    <div style="margin-top: 15px;">
+        <strong>Recipient ID:</strong> {{ recipient.recipient_id }} | 
+        <strong>Blood Type:</strong> {{ recipient.blood_type }} | 
+        <strong>Current Status:</strong> {{ recipient.status }}
+    </div>
+</div>
+
+<div class="section">
+    <h3>🏥 Surgery History</h3>
+    {% if surgeries %}
+    <table>
+        <thead>
+            <tr>
+                <th>Surgery ID</th>
+                <th>Date</th>
+                <th>Organ</th>
+                <th>Hospital</th>
+                <th>Surgeon</th>
+                <th>Outcome</th>
+                <th>Duration</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for surgery in surgeries %}
+            <tr>
+                <td>{{ surgery.surgery_id }}</td>
+                <td>{{ surgery.surgery_date }}</td>
+                <td>{{ surgery.organ.type_name.type_name }}</td>
+                <td>{{ surgery.hospital.name }}</td>
+                <td>{{ surgery.primary_surgeon.name }}</td>
+                <td><strong>{{ surgery.outcome }}</strong></td>
+                <td>{{ surgery.duration_hours }} hrs</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="no-data">No surgeries recorded</div>
+    {% endif %}
+</div>
+
+<div class="section">
+    <h3>💊 Medication Regimen</h3>
+    {% if medications %}
+    <table>
+        <thead>
+            <tr>
+                <th>Medication</th>
+                <th>Dosage</th>
+                <th>Frequency</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Prescribed By</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for med in medications %}
+            <tr>
+                <td><strong>{{ med.medication.name }}</strong></td>
+                <td>{{ med.dosage }}</td>
+                <td>{{ med.frequency }}</td>
+                <td>{{ med.start_date }}</td>
+                <td>{{ med.end_date|default:"Ongoing" }}</td>
+                <td>{{ med.prescribing_staff.name|default:"N/A" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="no-data">No medications recorded</div>
+    {% endif %}
+</div>
+{% endblock %}

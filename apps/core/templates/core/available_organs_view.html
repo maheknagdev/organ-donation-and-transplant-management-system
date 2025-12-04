@@ -1,0 +1,54 @@
+{% extends 'core/base.html' %}
+{% block title %}Available Organs (MySQL View){% endblock %}
+{% block content %}
+<style>
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; background: white; font-size: 0.85em; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #667eea; color: white; }
+    tr:hover { background: #f5f5f5; }
+    .view-note { background: #d1ecf1; padding: 15px; border-radius: 5px; margin-bottom: 20px; color: #0c5460; }
+</style>
+
+<a href="{% url 'core:available_organs' %}" class="back-link">← Back to Python Version</a>
+
+<h2>💊 Available Organs (MySQL View)</h2>
+
+<div class="view-note">
+    <strong>✓ MySQL VIEW Used:</strong> Available_Organs<br>
+    This view uses GetRemainingViableHours() function to calculate viability in real-time.
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Donor</th>
+            <th>Blood</th>
+            <th>Procurement</th>
+            <th>Hours Left</th>
+            <th>Viability %</th>
+            <th>Viability Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for organ in organs %}
+        <tr>
+            <td>{{ organ.Organ_ID }}</td>
+            <td>{{ organ.Organ_Type }}</td>
+            <td>{{ organ.Status }}</td>
+            <td>{{ organ.Donor_Name }}</td>
+            <td>{{ organ.Donor_Blood_Type }}</td>
+            <td>{{ organ.Procurement_DateTime }}</td>
+            <td><strong>{{ organ.Hours_Remaining|floatformat:1 }}</strong></td>
+            <td>{{ organ.Viability_Percentage }}%</td>
+            <td>{{ organ.Viability_Status }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" style="text-align: center; padding: 40px;">No organs available</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

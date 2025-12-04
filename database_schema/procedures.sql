@@ -1,3 +1,5 @@
+USE organ_donation_db;
+
 -- Check organ Viability
 DELIMITER //
 CREATE PROCEDURE CheckOrganViability(IN p_organ_id INT)
@@ -179,93 +181,98 @@ END //
 DELIMITER ;
 
 -- Match organ to recipient
-DELIMITER //
+DROP PROCEDURE IF EXISTS MatchOrganToRecipients;
+
+DELIMITER $$
+
 CREATE PROCEDURE MatchOrganToRecipients(IN p_organ_id INT)
 BEGIN
-    DECLARE organ_type_name VARCHAR(30);
-    DECLARE organ_donor_id INT;
-    DECLARE organ_blood_type VARCHAR(3);
-    DECLARE organ_procurement_datetime DATETIME;
-    DECLARE organ_zip VARCHAR(10);
-    -- Get organ details
+    -- Find and rank compatible recipients directly
+    -- No variable assignments to avoid "more than one row" error
+    
     SELECT 
-        o.Type_Name,
-        o.Donor_ID,
-        d.Blood_Type,
-        CONCAT(o.Procurement_Date, ' ', o.Procurement_Time),
-        h.Zipcode
-    INTO 
-        organ_type_name,
-        organ_donor_id,
-        organ_blood_type,
-        organ_procurement_datetime,
-        organ_zip
+        r.Recipient_ID,
+        r.Name as Recipient_Name,
+        r.Blood_Type as Recipient_Blood,
+        r.Medical_Urgency_Level,
+        wl.Priority_Score,
+        wl.Wait_List_Date,
+        DATEDIFF(CURDATE(), wl.Wait_List_Date) as Days_Waiting,
+        
+        -- Blood Type Score (30 points)
+        CASE 
+            WHEN d.Blood_Type = r.Blood_Type THEN 30.00
+            WHEN d.Blood_Type = 'O-' THEN 25.00
+            WHEN d.Blood_Type = 'O+' AND r.Blood_Type IN ('O+', 'A+', 'B+', 'AB+') THEN 25.00
+            WHEN d.Blood_Type = 'A-' AND r.Blood_Type IN ('A-', 'A+', 'AB-', 'AB+') THEN 22.00
+            WHEN d.Blood_Type = 'A+' AND r.Blood_Type IN ('A+', 'AB+') THEN 22.00
+            WHEN d.Blood_Type = 'B-' AND r.Blood_Type IN ('B-', 'B+', 'AB-', 'AB+') THEN 22.00
+            WHEN d.Blood_Type = 'B+' AND r.Blood_Type IN ('B+', 'AB+') THEN 22.00
+            WHEN d.Blood_Type = 'AB-' AND r.Blood_Type IN ('AB-', 'AB+') THEN 22.00
+            WHEN r.Blood_Type = 'AB+' THEN 20.00
+            ELSE 0.00
+        END as Blood_Type_Score,
+        
+        -- HLA Score (25 points - simplified)
+        15.00 as HLA_Score,
+        
+        -- Wait Time Score (20 points max)
+        LEAST(DATEDIFF(CURDATE(), wl.Wait_List_Date) / 30, 20) as Wait_Time_Score,
+        
+        -- Geographic Score (15 points - simplified)
+        15.00 as Geographic_Score,
+        
+        -- Urgency Score (10 points)
+        r.Medical_Urgency_Level * 2 as Urgency_Score,
+        
+        -- Total Match Score
+        (
+            CASE 
+                WHEN d.Blood_Type = r.Blood_Type THEN 30.00
+                WHEN d.Blood_Type = 'O-' THEN 25.00
+                WHEN d.Blood_Type = 'O+' AND r.Blood_Type IN ('O+', 'A+', 'B+', 'AB+') THEN 25.00
+                WHEN d.Blood_Type = 'A-' AND r.Blood_Type IN ('A-', 'A+', 'AB-', 'AB+') THEN 22.00
+                WHEN d.Blood_Type = 'A+' AND r.Blood_Type IN ('A+', 'AB+') THEN 22.00
+                WHEN d.Blood_Type = 'B-' AND r.Blood_Type IN ('B-', 'B+', 'AB-', 'AB+') THEN 22.00
+                WHEN d.Blood_Type = 'B+' AND r.Blood_Type IN ('B+', 'AB+') THEN 22.00
+                WHEN d.Blood_Type = 'AB-' AND r.Blood_Type IN ('AB-', 'AB+') THEN 22.00
+                WHEN r.Blood_Type = 'AB+' THEN 20.00
+                ELSE 0.00
+            END +
+            15.00 +  -- HLA
+            LEAST(DATEDIFF(CURDATE(), wl.Wait_List_Date) / 30, 20) +  -- Wait time
+            15.00 +  -- Geographic
+            (r.Medical_Urgency_Level * 2)  -- Urgency
+        ) as Total_Match_Score
+        
     FROM Organ o
     JOIN Donor d ON o.Donor_ID = d.Donor_ID
-    LEFT JOIN Hospital h ON d.Donor_ID = d.Donor_ID
-    WHERE o.Organ_ID = p_organ_id;
-    -- If organ not found, return error
-    IF organ_type_name IS NULL THEN
-        SELECT 'Error: Organ not found' as Message;
-    ELSE
-        -- Find and rank compatible recipients
-        SELECT 
-            r.Recipient_ID,
-            r.Name as Recipient_Name,
-            r.Blood_Type as Recipient_Blood,
-            r.Medical_Urgency_Level,
-            wl.Priority_Score,
-            wl.Wait_List_Date,
-            CalculateWaitTimeDays(r.Recipient_ID, organ_type_name) as Days_Waiting,
-            -- Calculate individual score components
-            CASE 
-                WHEN CheckBloodTypeCompatibility(organ_blood_type, r.Blood_Type) = FALSE THEN 0
-                WHEN organ_blood_type = r.Blood_Type THEN 30.00
-                ELSE 20.00
-            END as Blood_Type_Score,
-            -- HLA score (simplified - would need actual HLA matching logic)
-            15.00 as HLA_Score,
-            -- Wait time score (20 points max, 1 point per 30 days)
-            LEAST(CalculateWaitTimeDays(r.Recipient_ID, organ_type_name) / 30, 20) as Wait_Time_Score,
-            -- Geographic score (15 points - simplified, assume same state = 15, different = 7)
-            15.00 as Geographic_Score,
-            -- Urgency score (10 points max, based on urgency level 1-5)
-            r.Medical_Urgency_Level * 2 as Urgency_Score,
-            -- Total compatibility score
-            CASE 
-                WHEN CheckBloodTypeCompatibility(organ_blood_type, r.Blood_Type) = FALSE THEN 0
-                ELSE (
-                    -- Blood type (30%)
-                    CASE 
-                        WHEN organ_blood_type = r.Blood_Type THEN 30.00
-                        ELSE 20.00
-                    END +
-                    -- HLA (25%)
-                    15.00 +
-                    -- Wait time (20%)
-                    LEAST(CalculateWaitTimeDays(r.Recipient_ID, organ_type_name) / 30, 20) +
-                    -- Geographic (15%)
-                    15.00 +
-                    -- Urgency (10%)
-                    r.Medical_Urgency_Level * 2
-                )
-            END as Total_Match_Score
-        FROM Recipient r
-        JOIN Recipient_Waitlist wl ON r.Recipient_ID = wl.Recipient_ID
-        WHERE wl.Type_Name = organ_type_name
-          AND wl.Status = 'Waiting'
-          AND r.Status = 'Waiting'
-          AND CheckBloodTypeCompatibility(organ_blood_type, r.Blood_Type) = TRUE
-        -- Check for positive crossmatch (incompatible)
-          AND NOT EXISTS (
-              SELECT 1 FROM Compatibility_Test ct
-              WHERE ct.Donor_ID = organ_donor_id
-                AND ct.Recipient_ID = r.Recipient_ID
-                AND ct.Test_Result = 'Incompatible'
-          )
-        -- Order by total score (best matches first)
-        ORDER BY Total_Match_Score DESC, Days_Waiting DESC
-        LIMIT 10;
-    END IF;
-END //
+    JOIN Recipient_Waitlist wl ON wl.Type_Name = o.Type_Name
+    JOIN Recipient r ON r.Recipient_ID = wl.Recipient_ID
+    WHERE o.Organ_ID = p_organ_id
+      AND wl.Status = 'Waiting'
+      AND r.Status = 'Waiting'
+      AND (
+          -- Blood compatibility check inline
+          d.Blood_Type = r.Blood_Type OR
+          d.Blood_Type = 'O-' OR
+          (d.Blood_Type = 'O+' AND r.Blood_Type IN ('O+', 'A+', 'B+', 'AB+')) OR
+          (d.Blood_Type = 'A-' AND r.Blood_Type IN ('A-', 'A+', 'AB-', 'AB+')) OR
+          (d.Blood_Type = 'A+' AND r.Blood_Type IN ('A+', 'AB+')) OR
+          (d.Blood_Type = 'B-' AND r.Blood_Type IN ('B-', 'B+', 'AB-', 'AB+')) OR
+          (d.Blood_Type = 'B+' AND r.Blood_Type IN ('B+', 'AB+')) OR
+          (d.Blood_Type = 'AB-' AND r.Blood_Type IN ('AB-', 'AB+')) OR
+          r.Blood_Type = 'AB+'
+      )
+      AND NOT EXISTS (
+          SELECT 1 FROM Compatibility_Test ct
+          WHERE ct.Donor_ID = d.Donor_ID
+            AND ct.Recipient_ID = r.Recipient_ID
+            AND ct.Test_Result = 'Incompatible'
+      )
+    ORDER BY Total_Match_Score DESC, Days_Waiting DESC
+    LIMIT 10;
+    
+END$$
+
 DELIMITER ;

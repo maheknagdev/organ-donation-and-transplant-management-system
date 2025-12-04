@@ -1,0 +1,50 @@
+{% extends 'core/base.html' %}
+{% block title %}Add to Waitlist{% endblock %}
+{% block content %}
+<style>
+    form { max-width: 600px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+    select, input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    .btn { padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background: #764ba2; }
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+</style>
+
+<a href="{% url 'core:waitlist' %}" class="back-link">← Back to Waitlist</a>
+
+<h2>Add Recipient to Waitlist</h2>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="form-group">
+        <label>Recipient *</label>
+        <select name="recipient_id" required>
+            <option value="">Select Recipient</option>
+            {% for recipient in recipients %}
+            <option value="{{ recipient.recipient_id }}">
+                {{ recipient.name }} (ID: {{ recipient.recipient_id }}, Blood: {{ recipient.blood_type }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Organ Type Needed *</label>
+        <select name="organ_type" required>
+            <option value="">Select Organ Type</option>
+            {% for organ_type in organ_types %}
+            <option value="{{ organ_type.type_name }}">{{ organ_type.type_name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Wait List Date *</label>
+        <input type="date" name="wait_list_date" required>
+    </div>
+    
+    <button type="submit" class="btn">Add to Waitlist</button>
+</form>
+{% endblock %}

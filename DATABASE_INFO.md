@@ -1,7 +1,7 @@
 # Database Connection Information
 
 ## Database Details
-- **Database Name**: `organ_donation_and_transplant_db`
+- **Database Name**: `organ_donation_db`
 - **Host**: `localhost`
 - **Port**: `3306`
 - **Charset**: `utf8mb4`
@@ -12,7 +12,7 @@
 ### Connection Setup
 ```sql
 -- You'll need to create the same database on your local MySQL:
-CREATE DATABASE organ_donation_and_transplant_db 
+CREATE DATABASE organ_donation_db 
 CHARACTER SET utf8mb4 
 COLLATE utf8mb4_unicode_ci;
 ```

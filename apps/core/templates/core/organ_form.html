@@ -1,0 +1,67 @@
+{% extends 'core/base.html' %}
+{% block title %}Record Organ Procurement{% endblock %}
+{% block content %}
+<style>
+    form { max-width: 600px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    .btn { padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn:hover { background: #764ba2; }
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+</style>
+
+<a href="{% url 'core:available_organs' %}" class="back-link">← Back to Available Organs</a>
+
+<h2>Record New Organ Procurement</h2>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="form-group">
+        <label>Donor *</label>
+        <select name="donor_id" required>
+            <option value="">Select Donor</option>
+            {% for donor in donors %}
+            <option value="{{ donor.donor_id }}">
+                {{ donor.name }} (Blood: {{ donor.blood_type }}, Status: {{ donor.status }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Organ Type *</label>
+        <select name="organ_type" required>
+            <option value="">Select Organ Type</option>
+            {% for organ_type in organ_types %}
+            <option value="{{ organ_type.type_name }}">
+                {{ organ_type.type_name }} (Viability: {{ organ_type.typical_viability_hours }}hrs)
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>Procurement Date *</label>
+        <input type="date" name="procurement_date" required>
+    </div>
+    
+    <div class="form-group">
+        <label>Procurement Time *</label>
+        <input type="time" name="procurement_time" required>
+    </div>
+    
+    <div class="form-group">
+        <label>HLA Type</label>
+        <input type="text" name="hla_type" placeholder="e.g., A1, B8, DR3">
+    </div>
+    
+    <div class="form-group">
+        <label>Size/Weight (grams)</label>
+        <input type="number" name="size_weight" step="0.01" placeholder="e.g., 150.50">
+    </div>
+    
+    <button type="submit" class="btn">Record Organ</button>
+</form>
+{% endblock %}

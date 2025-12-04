@@ -1,0 +1,353 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Available Organs - Organ Donation System{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+    }
+    
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .summary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .summary-card h3 {
+        font-size: 0.9em;
+        opacity: 0.9;
+        margin-bottom: 10px;
+    }
+    
+    .summary-card .number {
+        font-size: 2em;
+        font-weight: bold;
+    }
+    
+    .organs-grid {
+        display: grid;
+        gap: 20px;
+    }
+    
+    .organ-card {
+        background: white;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: all 0.3s;
+    }
+    
+    .organ-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    
+    .organ-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .organ-title {
+        flex: 1;
+    }
+    
+    .organ-title h3 {
+        color: #667eea;
+        font-size: 1.3em;
+        margin-bottom: 5px;
+    }
+    
+    .organ-id {
+        color: #666;
+        font-size: 0.9em;
+    }
+    
+    .status-badge {
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 0.85em;
+        text-transform: uppercase;
+    }
+    
+    .status-available {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-allocated {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .organ-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .detail-label {
+        font-size: 0.85em;
+        color: #666;
+        margin-bottom: 5px;
+    }
+    
+    .detail-value {
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .viability-section {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+    }
+    
+    .viability-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .viability-status {
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-weight: bold;
+        font-size: 0.85em;
+    }
+    
+    .viability-status.normal {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .viability-status.urgent {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .viability-status.critical {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .viability-status.expired {
+        background: #d6d8db;
+        color: #383d41;
+    }
+    
+    .progress-bar {
+        height: 25px;
+        background: #e0e0e0;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-top: 10px;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 0.85em;
+        transition: width 0.3s;
+    }
+    
+    .progress-fill.normal {
+        background: linear-gradient(90deg, #43e97b 0%, #38f9d7 100%);
+    }
+    
+    .progress-fill.urgent {
+        background: linear-gradient(90deg, #fa709a 0%, #fee140 100%);
+    }
+    
+    .progress-fill.critical {
+        background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .progress-fill.expired {
+        background: linear-gradient(90deg, #616161 0%, #9e9e9e 100%);
+    }
+    
+    .viability-info {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9em;
+        margin-top: 8px;
+        color: #666;
+    }
+    
+    .back-link {
+        display: inline-block;
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+        margin-bottom: 20px;
+    }
+    
+    .back-link:hover {
+        color: #764ba2;
+    }
+    
+    .no-organs {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+</style>
+
+<a href="/" class="back-link">← Back to Dashboard</a>
+
+<div class="page-header">
+    <h2>💊 Available Organs</h2>
+</div>
+
+<div class="summary-cards">
+    <div class="summary-card">
+        <h3>Available</h3>
+        <div class="number">{{ total_available }}</div>
+    </div>
+    <div class="summary-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <h3>Allocated</h3>
+        <div class="number">{{ total_allocated }}</div>
+    </div>
+    <div class="summary-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+        <h3>Total</h3>
+        <div class="number">{{ organs_with_viability|length }}</div>
+    </div>
+</div>
+
+<div class="organs-grid">
+    {% for item in organs_with_viability %}
+    <div class="organ-card">
+        <div class="organ-header">
+            <div class="organ-title">
+                <h3>{{ item.organ.type_name.type_name }}</h3>
+                <div class="organ-id">Organ ID: #{{ item.organ.organ_id }}</div>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <span class="status-badge status-{{ item.organ.status|lower }}">
+                    {{ item.organ.status }}
+                </span>
+                
+                {# Only show action buttons to Medical Staff and Admin AND organ not expired #}
+                {% if request.session.role == 'Medical_Staff' or request.session.role == 'Administrator' %}
+                    {% if item.viability_status != 'Expired' %}
+
+                        <a href="{% url 'core:check_organ_viability' item.organ.organ_id %}" 
+                        style="background: #17a2b8; color: white; padding: 8px 16px; border-radius: 5px; text-decoration: none; font-size: 0.9em;">
+                            ⏱️ Viability
+                        </a>
+                        <a href="{% url 'core:match_organ' item.organ.organ_id %}" 
+                        style="background: #667eea; color: white; padding: 8px 16px; border-radius: 5px; text-decoration: none; font-size: 0.9em;">
+                            🎯 Find Matches
+                        </a>
+                        
+                        {% if item.organ.status == 'Available' %}
+                        <a href="{% url 'core:allocate_organ_page' item.organ.organ_id %}" 
+                        style="background: #28a745; color: white; padding: 8px 16px; border-radius: 5px; text-decoration: none; font-size: 0.9em;">
+                            ✓ Allocate
+                        </a>
+                        {% endif %}
+                    {% else %}
+                        <span style="background: #6c757d; color: white; padding: 8px 16px; border-radius: 5px; font-size: 0.9em; opacity: 0.6;">
+                            ⏰ Expired
+                        </span>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="organ-details">
+            <div class="detail-item">
+                <span class="detail-label">Donor</span>
+                <span class="detail-value">{{ item.organ.donor.name }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Blood Type</span>
+                <span class="detail-value">{{ item.organ.donor.blood_type }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Procurement Date</span>
+                <span class="detail-value">{{ item.organ.procurement_date }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Procurement Time</span>
+                <span class="detail-value">{{ item.organ.procurement_time }}</span>
+            </div>
+            {% if item.organ.hla_type %}
+            <div class="detail-item">
+                <span class="detail-label">HLA Type</span>
+                <span class="detail-value">{{ item.organ.hla_type }}</span>
+            </div>
+            {% endif %}
+            {% if item.organ.size_weight %}
+            <div class="detail-item">
+                <span class="detail-label">Size/Weight</span>
+                <span class="detail-value">{{ item.organ.size_weight }} g</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="viability-section">
+            <div class="viability-header">
+                <strong>⏱️ Viability Status</strong>
+                <span class="viability-status {{ item.viability_class }}">
+                    {{ item.viability_status }}
+                </span>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill {{ item.viability_class }}" 
+                     style="width: {{ item.viability_percentage|floatformat:0 }}%">
+                    {% if item.remaining_hours > 0 %}
+                        {{ item.remaining_hours }} hrs remaining
+                    {% else %}
+                        Expired
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="viability-info">
+                <span>Elapsed: {{ item.elapsed_hours }} hrs</span>
+                <span>Max Viability: {{ item.max_hours }} hrs</span>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="no-organs">
+        <h3>No organs currently available</h3>
+        <p>Check back later or add organs through the admin panel.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends 'core/base.html' %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<style>
+    .register-container { max-width: 500px; margin: 50px auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    .btn { width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; }
+    .btn:hover { background: #764ba2; }
+    .login-link { text-align: center; margin-top: 20px; }
+    .login-link a { color: #667eea; text-decoration: none; }
+</style>
+
+<div class="register-container">
+    <h2 style="text-align: center; color: #667eea; margin-bottom: 30px;">📝 Register</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 10px; background: {% if 'success' in message.tags %}#d4edda{% else %}#f8d7da{% endif %}; 
+                        color: {% if 'success' in message.tags %}#155724{% else %}#721c24{% endif %}; 
+                        border-radius: 5px; margin-bottom: 20px;">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label>Username *</label>
+            <input type="text" name="username" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Email *</label>
+            <input type="email" name="email" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Password *</label>
+            <input type="password" name="password" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Role *</label>
+            <select name="role" required>
+                <option value="">Select Role</option>
+                <option value="Recipient">Recipient (Patient)</option>
+                <option value="Medical_Staff">Medical Staff</option>
+                <option value="Coordinator">Coordinator</option>
+                <option value="Administrator">Administrator</option>
+            </select>
+        </div>
+        
+        <button type="submit" class="btn">Register</button>
+    </form>
+    
+    <div class="login-link">
+        Already have an account? <a href="{% url 'core:login' %}">Login here</a>
+    </div>
+</div>
+{% endblock %}

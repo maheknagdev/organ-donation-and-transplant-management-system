@@ -1,0 +1,56 @@
+{% extends 'core/base.html' %}
+{% block title %}Critical Recipients{% endblock %}
+{% block content %}
+<style>
+    .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; font-size: 0.9em; }
+    th { background: #dc3545; color: white; }
+    tr:hover { background: #f5f5f5; }
+    .urgency-emergency { background: #f8d7da; color: #721c24; padding: 5px 10px; border-radius: 12px; font-weight: bold; }
+    .urgency-critical { background: #fff3cd; color: #856404; padding: 5px 10px; border-radius: 12px; font-weight: bold; }
+    .view-note { background: #d1ecf1; padding: 15px; border-radius: 5px; margin-bottom: 20px; color: #0c5460; }
+</style>
+
+<a href="/" class="back-link">← Back to Dashboard</a>
+
+<h2>🚨 Critical Recipients</h2>
+
+<div>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Blood</th>
+            <th>Diagnosis</th>
+            <th>Organ Needed</th>
+            <th>Priority</th>
+            <th>Days Waiting</th>
+            <th>Category</th>
+            <th>Wait Category</th>
+            <th>Contact</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for patient in critical_patients %}
+        <tr>
+            <td>{{ patient.Recipient_ID }}</td>
+            <td><strong>{{ patient.Recipient_Name }}</strong></td>
+            <td>{{ patient.Blood_Type }}</td>
+            <td>{{ patient.Primary_Diagnosis|truncatewords:5 }}</td>
+            <td>{{ patient.Organ_Needed }}</td>
+            <td><strong>{{ patient.Priority_Score|floatformat:1 }}</strong></td>
+            <td>{{ patient.Days_Waiting }}</td>
+            <td><span class="urgency-{{ patient.Priority_Category|lower }}">{{ patient.Priority_Category }}</span></td>
+            <td>{{ patient.Wait_Time_Category }}</td>
+            <td style="font-size: 0.85em;">{{ patient.Contact_Info|truncatewords:3 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="10" style="text-align: center; padding: 40px;">No critical recipients</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
