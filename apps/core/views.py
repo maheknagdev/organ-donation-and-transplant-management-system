@@ -6,7 +6,7 @@ from datetime import datetime, date
 from .models import (
     Donor, Recipient, Organ, OrganType, Hospital, MedicalStaff,
     Surgery, RecipientWaitlist, OrganAllocation, RecipientMedication,
-    User, FollowUpAppointment
+    User, FollowUpAppointment, HospitalCapabilities
 )
 from .decorators import login_required_custom, role_required
 
@@ -20,14 +20,15 @@ def user_login(request):
         
         try:
             user = User.objects.get(username=username)
-            # Simple password check
+            if user.account_status != 'Active':
+                messages.error(request, 'Account is not active')
+                return render(request, 'core/login.html')
+                
             if user.password_hash == password or check_password(password, user.password_hash):
-                # Store user info in session
                 request.session['user_id'] = user.user_id
                 request.session['username'] = user.username
                 request.session['role'] = user.role
                 
-                # Update last login
                 user.last_login = datetime.now()
                 user.save()
                 
@@ -56,9 +57,10 @@ def user_register(request):
         password = request.POST.get('password')
         role = request.POST.get('role')
         
-        # Check if username exists
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Username already exists')
+        elif User.objects.filter(email=email).exists():
+            messages.error(request, 'Email already registered')
         else:
             User.objects.create(
                 username=username,
@@ -77,42 +79,73 @@ def user_register(request):
 # ==================== DASHBOARD ====================
 @login_required_custom
 def dashboard(request):
-    """Homepage dashboard - accessible to all logged-in users"""
+    """Homepage dashboard - role-specific views"""
     user_role = request.session.get('role')
     user_id = request.session.get('user_id')
     
-    # Base stats for all users
-    context = {
-        'total_donors': Donor.objects.count(),
-        'total_recipients': Recipient.objects.count(),
-        'total_organs': Organ.objects.count(),
-        'total_hospitals': Hospital.objects.count(),
-        'available_organs': Organ.objects.filter(status='Available').count(),
-        'waiting_recipients': Recipient.objects.filter(status='Waiting').count(),
-        'organ_types': OrganType.objects.all(),
-        'user_id': user_id,
-        'username': request.session.get('username'),
-        'role': user_role,
-    }
-    
-    # Add role-specific data
-    if user_role in ['Administrator', 'Medical_Staff', 'Coordinator']:
-        context['total_staff'] = MedicalStaff.objects.count()
-        context['total_surgeries'] = Surgery.objects.count()
-        context['pending_allocations'] = OrganAllocation.objects.filter(status='Pending').count()
-        context['active_waitlist'] = RecipientWaitlist.objects.filter(status='Waiting').count()
-    
-    # Recipient-specific data
+    # RECIPIENT gets personalized dashboard with ONLY their data
     if user_role == 'Recipient':
         try:
             recipient = Recipient.objects.get(user_id=user_id)
-            context['my_waitlist'] = RecipientWaitlist.objects.filter(recipient=recipient, status='Waiting')
-            context['my_allocations'] = OrganAllocation.objects.filter(recipient=recipient, status='Pending')
-            context['my_recipient'] = recipient
+            
+            my_waitlist = RecipientWaitlist.objects.filter(
+                recipient=recipient, 
+                status='Waiting'
+            ).select_related('type_name')
+            
+            my_allocations = OrganAllocation.objects.filter(
+                recipient=recipient, 
+                status='Pending'
+            ).select_related('organ', 'organ__type_name', 'organ__donor')
+            
+            my_surgeries = Surgery.objects.filter(
+                recipient=recipient
+            ).select_related('organ', 'hospital', 'primary_surgeon')
+            
+            context = {
+                'user_id': user_id,
+                'username': request.session.get('username'),
+                'role': user_role,
+                'my_recipient': recipient,
+                'my_waitlist': my_waitlist,
+                'my_allocations': my_allocations,
+                'my_surgeries': my_surgeries,
+                'total_available_organs': Organ.objects.filter(status='Available').count(),
+                'organ_types': OrganType.objects.all(),
+            }
+            return render(request, 'core/recipient_dashboard.html', context)
+            
         except Recipient.DoesNotExist:
-            pass
+            context = {
+                'user_id': user_id,
+                'username': request.session.get('username'),
+                'role': user_role,
+                'error': 'No recipient profile found. Please contact administrator.',
+            }
+            return render(request, 'core/recipient_dashboard.html', context)
     
-    return render(request, 'core/dashboard.html', context)
+    # STAFF/COORDINATOR/ADMIN get full system dashboard
+    else:
+        context = {
+            'total_donors': Donor.objects.count(),
+            'total_recipients': Recipient.objects.count(),
+            'total_organs': Organ.objects.count(),
+            'total_hospitals': Hospital.objects.count(),
+            'available_organs': Organ.objects.filter(status='Available').count(),
+            'waiting_recipients': Recipient.objects.filter(status='Waiting').count(),
+            'organ_types': OrganType.objects.all(),
+            'user_id': user_id,
+            'username': request.session.get('username'),
+            'role': user_role,
+        }
+        
+        if user_role in ['Administrator', 'Medical_Staff', 'Coordinator']:
+            context['total_staff'] = MedicalStaff.objects.count()
+            context['total_surgeries'] = Surgery.objects.count()
+            context['pending_allocations'] = OrganAllocation.objects.filter(status='Pending').count()
+            context['active_waitlist'] = RecipientWaitlist.objects.filter(status='Waiting').count()
+        
+        return render(request, 'core/dashboard.html', context)
 
 
 # ==================== ORGANS ====================
@@ -192,7 +225,6 @@ def check_organ_viability(request, organ_id):
             result = cursor.fetchone()
             viability_data = dict(zip(columns, result)) if result else None
             
-            # Consume additional result sets
             while cursor.nextset():
                 cursor.fetchall()
                 
@@ -209,29 +241,29 @@ def check_organ_viability(request, organ_id):
 @login_required_custom
 @role_required('Medical_Staff', 'Administrator')
 def match_organ(request, organ_id):
-    """Medical staff and admin only - Call MatchOrganToRecipients procedure"""
+    """Medical staff and admin only - Call MatchOrganToRecipients procedure
+    CONSTRAINT: Only for non-expired organs"""
     organ = get_object_or_404(Organ, organ_id=organ_id)
+    
+    if organ.status == 'Expired':
+        messages.error(request, 'Cannot match expired organ')
+        return redirect('core:available_organs')
+    
     matches = []
     
     with connection.cursor() as cursor:
         try:
             cursor.callproc('MatchOrganToRecipients', [organ_id])
-            
-            # Get the first result set
             columns = [col[0] for col in cursor.description]
             results = cursor.fetchall()
             
-            # Check if it's an error message
             if results and len(results) > 0:
                 first_row = results[0]
-                # If first column is 'Message' and contains 'Error', it's an error
                 if columns[0] == 'Message' and isinstance(first_row[0], str) and 'Error' in first_row[0]:
                     messages.error(request, first_row[0])
                 else:
-                    # Valid results - convert to dictionaries
                     matches = [dict(zip(columns, row)) for row in results]
             
-            # Consume any additional result sets
             while cursor.nextset():
                 cursor.fetchall()
                 
@@ -249,25 +281,43 @@ def match_organ(request, organ_id):
 @login_required_custom
 @role_required('Medical_Staff', 'Administrator')
 def allocate_organ_page(request, organ_id):
-    """Medical staff and admin only - Call AllocateOrgan procedure"""
+    """Medical staff and admin only - Call AllocateOrgan procedure
+    CONSTRAINT: Only for AVAILABLE organs"""
     organ = get_object_or_404(Organ, organ_id=organ_id)
+    
+    if organ.status != 'Available':
+        messages.error(request, f'Cannot allocate organ. Current status: {organ.status}')
+        return redirect('core:available_organs')
+    
+    procurement_datetime = datetime.combine(organ.procurement_date, organ.procurement_time)
+    elapsed_hours = (datetime.now() - procurement_datetime).total_seconds() / 3600
+    remaining_hours = organ.type_name.typical_viability_hours - elapsed_hours
+    
+    if remaining_hours <= 0:
+        messages.error(request, 'Cannot allocate expired organ')
+        return redirect('core:available_organs')
     
     if request.method == 'POST':
         recipient_id = request.POST.get('recipient_id')
         
-        # Call AllocateOrgan stored procedure
+        if not RecipientWaitlist.objects.filter(
+            recipient_id=recipient_id,
+            type_name=organ.type_name,
+            status='Waiting'
+        ).exists():
+            messages.error(request, 'Recipient is not on waitlist for this organ type')
+            return redirect('core:allocate_organ_page', organ_id=organ_id)
+        
         allocation_result = None
         with connection.cursor() as cursor:
             try:
                 cursor.callproc('AllocateOrgan', [organ_id, recipient_id])
                 
-                # Fetch the result
                 if cursor.description:
                     columns = [col[0] for col in cursor.description]
                     result = cursor.fetchone()
                     allocation_result = dict(zip(columns, result)) if result else None
                 
-                # Consume any additional result sets
                 while True:
                     if not cursor.nextset():
                         break
@@ -285,26 +335,18 @@ def allocate_organ_page(request, organ_id):
             error_msg = allocation_result.get('Message', 'Allocation failed') if allocation_result else 'Allocation failed'
             messages.error(request, error_msg)
     
-    # Get potential recipients - use direct query instead of procedure
     potential_recipients = []
     
-    # Get organ details first
-    organ_with_donor = Organ.objects.select_related('donor', 'type_name').get(organ_id=organ_id)
-    
-    # Get matching recipients from waitlist
     waitlist_entries = RecipientWaitlist.objects.filter(
-        type_name=organ_with_donor.type_name,
+        type_name=organ.type_name,
         status='Waiting',
         recipient__status='Waiting'
     ).select_related('recipient').order_by('-priority_score')[:10]
     
-    # Calculate basic match scores
     for entry in waitlist_entries:
-        # Simple compatibility check
-        donor_blood = organ_with_donor.donor.blood_type
+        donor_blood = organ.donor.blood_type
         recip_blood = entry.recipient.blood_type
         
-        # Calculate score
         blood_score = 30 if donor_blood == recip_blood else 20
         wait_score = min((datetime.now().date() - entry.wait_list_date).days / 30, 20)
         urgency_score = entry.recipient.medical_urgency_level * 2
@@ -319,7 +361,6 @@ def allocate_organ_page(request, organ_id):
             'Total_Match_Score': round(total_score, 1),
         })
     
-    # Sort by score
     potential_recipients.sort(key=lambda x: x['Total_Match_Score'], reverse=True)
     
     context = {
@@ -332,7 +373,8 @@ def allocate_organ_page(request, organ_id):
 @login_required_custom
 @role_required('Medical_Staff', 'Administrator')
 def create_organ(request):
-    """Medical staff and admin only - Record organ procurement"""
+    """Medical staff and admin only - Record organ procurement
+    CONSTRAINTS: Donor must be Active/Deceased with medical clearance (enforced by trigger)"""
     if request.method == 'POST':
         donor_id = request.POST.get('donor_id')
         organ_type = request.POST.get('organ_type')
@@ -341,9 +383,12 @@ def create_organ(request):
         hla_type = request.POST.get('hla_type')
         size_weight = request.POST.get('size_weight')
         
+        proc_date = datetime.strptime(procurement_date, '%Y-%m-%d').date()
+        if proc_date > date.today():
+            messages.error(request, 'Procurement date cannot be in the future')
+            return redirect('core:create_organ')
+        
         try:
-            # This will trigger before_organ_insert (validation)
-            # and after_organ_insert (auto-matching)
             Organ.objects.create(
                 donor_id=donor_id,
                 type_name_id=organ_type,
@@ -356,10 +401,13 @@ def create_organ(request):
             messages.success(request, 'Organ recorded! Triggers fired: validation ✓, auto-matching ✓')
             return redirect('core:available_organs')
         except Exception as e:
-            messages.error(request, f'Error: {str(e)}')
+            messages.error(request, f'Trigger validation failed: {str(e)}')
     
     context = {
-        'donors': Donor.objects.filter(status__in=['Active', 'Deceased']),
+        'donors': Donor.objects.filter(
+            status__in=['Active', 'Deceased'],
+            medical_clearance_date__isnull=False
+        ).order_by('-registration_date'),
         'organ_types': OrganType.objects.all(),
     }
     return render(request, 'core/organ_form.html', context)
@@ -368,14 +416,21 @@ def create_organ(request):
 @login_required_custom
 @role_required('Medical_Staff', 'Administrator')
 def update_organ(request, organ_id):
-    """Medical staff and admin only - Update organ status"""
+    """Medical staff and admin only - Update organ status
+    CONSTRAINT: Cannot change Transplanted to Available (enforced by trigger)"""
     organ = get_object_or_404(Organ, organ_id=organ_id)
     
     if request.method == 'POST':
         try:
-            organ.status = request.POST.get('status')
-            organ.save()  # This triggers before_organ_update
-            messages.success(request, 'Organ status updated! Trigger logged the change.')
+            new_status = request.POST.get('status')
+            
+            if organ.status == 'Transplanted' and new_status != 'Transplanted':
+                messages.error(request, 'Cannot change status of transplanted organ (protected by trigger)')
+                return redirect('core:update_organ', organ_id=organ_id)
+            
+            organ.status = new_status
+            organ.save()
+            messages.success(request, 'Organ status updated!')
             return redirect('core:available_organs')
         except Exception as e:
             messages.error(request, f'Error: {str(e)}')
@@ -388,8 +443,9 @@ def update_organ(request, organ_id):
 @login_required_custom
 @role_required('Medical_Staff', 'Coordinator', 'Administrator')
 def donor_list(request):
-    """Staff, coordinators, and admin can view donors"""
-    donors = Donor.objects.all().order_by('-registration_date')
+    """Staff, coordinators, and admin can view donors
+    Shows organ count for each donor"""
+    donors = Donor.objects.prefetch_related('organ_set').all().order_by('-registration_date')
     context = {'donors': donors}
     return render(request, 'core/donor_list.html', context)
 
@@ -397,17 +453,29 @@ def donor_list(request):
 @login_required_custom
 @role_required('Coordinator', 'Administrator')
 def create_donor(request):
-    """Coordinators and admin only - Register donor"""
+    """Coordinators and admin only - Register donor
+    CONSTRAINTS: Deceased donors must have cause of death"""
     if request.method == 'POST':
+        donor_type = request.POST.get('donor_type')
+        cause_of_death = request.POST.get('cause_of_death')
+        
+        if donor_type == 'Deceased' and not cause_of_death:
+            messages.error(request, 'Deceased donors must have a cause of death')
+            return redirect('core:create_donor')
+        
+        if donor_type == 'Living' and cause_of_death:
+            messages.warning(request, 'Living donor should not have cause of death - clearing field')
+            cause_of_death = None
+        
         Donor.objects.create(
             name=request.POST.get('name'),
             date_of_birth=request.POST.get('date_of_birth'),
             blood_type=request.POST.get('blood_type'),
             gender=request.POST.get('gender'),
             contact_info=request.POST.get('contact_info'),
-            donor_type=request.POST.get('donor_type'),
+            donor_type=donor_type,
             medical_history=request.POST.get('medical_history'),
-            cause_of_death=request.POST.get('cause_of_death') if request.POST.get('cause_of_death') else None,
+            cause_of_death=cause_of_death,
             registration_date=request.POST.get('registration_date'),
             medical_clearance_date=request.POST.get('medical_clearance_date') if request.POST.get('medical_clearance_date') else None,
             status=request.POST.get('status')
@@ -421,7 +489,8 @@ def create_donor(request):
 @login_required_custom
 @role_required('Coordinator', 'Administrator')
 def update_donor(request, donor_id):
-    """Coordinators and admin only - Update donor"""
+    """Coordinators and admin only - Update donor
+    CONSTRAINT: Cannot delete if has active organs (enforced by trigger)"""
     donor = get_object_or_404(Donor, donor_id=donor_id)
     
     if request.method == 'POST':
@@ -449,8 +518,15 @@ def recipient_list(request):
 @login_required_custom
 @role_required('Coordinator', 'Administrator')
 def create_recipient(request):
-    """Coordinators and admin only - Register recipient"""
+    """Coordinators and admin only - Register recipient
+    CONSTRAINTS: Urgency 1-5, valid blood type"""
     if request.method == 'POST':
+        urgency = int(request.POST.get('medical_urgency_level'))
+        
+        if urgency < 1 or urgency > 5:
+            messages.error(request, 'Medical urgency level must be between 1 and 5')
+            return redirect('core:create_recipient')
+        
         Recipient.objects.create(
             name=request.POST.get('name'),
             date_of_birth=request.POST.get('date_of_birth'),
@@ -459,7 +535,7 @@ def create_recipient(request):
             contact_info=request.POST.get('contact_info'),
             medical_history=request.POST.get('medical_history'),
             primary_diagnosis=request.POST.get('primary_diagnosis'),
-            medical_urgency_level=request.POST.get('medical_urgency_level'),
+            medical_urgency_level=urgency,
             registration_date=request.POST.get('registration_date'),
             status='Waiting',
             insurance_info=request.POST.get('insurance_info')
@@ -473,18 +549,31 @@ def create_recipient(request):
 @login_required_custom
 @role_required('Medical_Staff', 'Coordinator', 'Administrator')
 def update_recipient(request, recipient_id):
-    """Staff, coordinators, and admin can update - Triggers after_recipient_update"""
+    """Staff, coordinators, and admin can update
+    CONSTRAINT: Cannot manually set to Transplanted (only via surgery trigger)
+    Triggers after_recipient_update if urgency changes"""
     recipient = get_object_or_404(Recipient, recipient_id=recipient_id)
     
     if request.method == 'POST':
+        new_status = request.POST.get('status')
+        new_urgency = int(request.POST.get('medical_urgency_level'))
+        
+        if new_urgency < 1 or new_urgency > 5:
+            messages.error(request, 'Urgency level must be 1-5')
+            return redirect('core:update_recipient', recipient_id=recipient_id)
+        
+        if new_status == 'Transplanted' and recipient.status != 'Transplanted':
+            messages.error(request, 'Cannot manually set to Transplanted. Use surgery scheduling.')
+            return redirect('core:update_recipient', recipient_id=recipient_id)
+        
         old_urgency = recipient.medical_urgency_level
-        recipient.medical_urgency_level = request.POST.get('medical_urgency_level')
-        recipient.status = request.POST.get('status')
+        recipient.medical_urgency_level = new_urgency
+        recipient.status = new_status
         recipient.contact_info = request.POST.get('contact_info')
         recipient.insurance_info = request.POST.get('insurance_info')
-        recipient.save()  # This triggers after_recipient_update if urgency changed
+        recipient.save()
         
-        if old_urgency != int(request.POST.get('medical_urgency_level')):
+        if old_urgency != new_urgency:
             messages.success(request, 'Recipient updated! Trigger auto-recalculated priority scores.')
         else:
             messages.success(request, 'Recipient updated successfully!')
@@ -502,7 +591,6 @@ def recipient_history(request, recipient_id):
     
     recipient = get_object_or_404(Recipient, recipient_id=recipient_id)
     
-    # If recipient user, can only view their own
     if user_role == 'Recipient':
         if not recipient.user or recipient.user.user_id != user_id:
             messages.error(request, 'You can only view your own history')
@@ -561,11 +649,27 @@ def active_waitlist_mysql_view(request):
 @login_required_custom
 @role_required('Coordinator', 'Administrator')
 def add_to_waitlist(request):
-    """Coordinators and admin only - Add to waitlist"""
+    """Coordinators and admin only - Add to waitlist
+    CONSTRAINTS: Recipient must be Waiting, no duplicates, no pending allocations"""
     if request.method == 'POST':
         recipient_id = request.POST.get('recipient_id')
         organ_type = request.POST.get('organ_type')
         wait_list_date = request.POST.get('wait_list_date')
+        
+        if RecipientWaitlist.objects.filter(
+            recipient_id=recipient_id,
+            type_name_id=organ_type
+        ).exists():
+            messages.error(request, 'Recipient is already on this waitlist')
+            return redirect('core:add_to_waitlist')
+        
+        if OrganAllocation.objects.filter(
+            recipient_id=recipient_id,
+            organ__type_name_id=organ_type,
+            status='Pending'
+        ).exists():
+            messages.error(request, 'Recipient has pending allocation for this organ type')
+            return redirect('core:add_to_waitlist')
         
         RecipientWaitlist.objects.create(
             recipient_id=recipient_id,
@@ -597,7 +701,6 @@ def calculate_priority(request, recipient_id, organ_type):
             result = cursor.fetchone()
             priority_data = dict(zip(columns, result)) if result else None
             
-            # Consume additional result sets
             while cursor.nextset():
                 cursor.fetchall()
                 
@@ -617,7 +720,17 @@ def calculate_priority(request, recipient_id, organ_type):
 @login_required_custom
 @role_required('Coordinator', 'Administrator')
 def remove_from_waitlist(request, recipient_id, organ_type):
-    """Coordinators and admin only - Remove from waitlist"""
+    """Coordinators and admin only - Remove from waitlist
+    CONSTRAINT: Cannot remove if has accepted allocation"""
+    
+    if OrganAllocation.objects.filter(
+        recipient_id=recipient_id,
+        organ__type_name_id=organ_type,
+        status='Accepted'
+    ).exists():
+        messages.error(request, 'Cannot remove - recipient has accepted allocation for this organ type')
+        return redirect('core:waitlist')
+    
     waitlist_entry = get_object_or_404(
         RecipientWaitlist, 
         recipient_id=recipient_id, 
@@ -636,7 +749,6 @@ def allocation_list(request):
     user_id = request.session.get('user_id')
     
     if user_role == 'Recipient':
-        # Recipients only see their own allocations
         try:
             recipient = Recipient.objects.get(user_id=user_id)
             allocations = OrganAllocation.objects.filter(
@@ -645,7 +757,6 @@ def allocation_list(request):
         except Recipient.DoesNotExist:
             allocations = OrganAllocation.objects.none()
     else:
-        # Staff see all allocations
         allocations = OrganAllocation.objects.select_related(
             'organ', 'recipient', 'organ__donor'
         ).order_by('-allocation_date')
@@ -656,25 +767,38 @@ def allocation_list(request):
 
 @login_required_custom
 def respond_to_allocation(request, allocation_id):
-    """Recipients respond to own, staff can respond to any"""
+    """Recipients respond to own, staff can respond to any
+    CONSTRAINTS: Only Pending allocations, deadline not passed, recipient still Waiting"""
     user_role = request.session.get('role')
     user_id = request.session.get('user_id')
     
     allocation = get_object_or_404(OrganAllocation, allocation_id=allocation_id)
     
-    # If recipient, can only respond to their own
+    if allocation.status != 'Pending':
+        messages.error(request, f'Cannot respond - allocation is already {allocation.status}')
+        return redirect('core:allocation_list')
+    
+    if allocation.response_deadline and datetime.now() > allocation.response_deadline.replace(tzinfo=None):
+        messages.error(request, 'Response deadline has passed')
+        allocation.status = 'Expired'
+        allocation.save()
+        return redirect('core:allocation_list')
+    
+    if allocation.recipient.status != 'Waiting':
+        messages.error(request, f'Recipient status is {allocation.recipient.status}, cannot respond')
+        return redirect('core:allocation_list')
+    
     if user_role == 'Recipient':
         if not allocation.recipient.user or allocation.recipient.user.user_id != user_id:
             messages.error(request, 'You can only respond to your own allocations')
             return redirect('core:allocation_list')
     
     if request.method == 'POST':
-        response = request.POST.get('response')  # 'Accepted' or 'Rejected'
+        response = request.POST.get('response')
         allocation.status = response
         allocation.save()
         
         if response == 'Rejected':
-            # Make organ available again for other recipients
             organ = allocation.organ
             organ.status = 'Available'
             organ.save()
@@ -704,29 +828,99 @@ def surgery_list(request):
 @login_required_custom
 @role_required('Medical_Staff', 'Administrator')
 def create_surgery(request):
-    """Medical staff and admin only - Schedule surgery"""
+    """Medical staff and admin only - Schedule surgery
+    CONSTRAINTS: Only allocated organs with accepted allocations"""
     if request.method == 'POST':
+        organ_recipient = request.POST.get('organ_recipient')
+        hospital_id = request.POST.get('hospital_id')
+        surgeon_id = request.POST.get('surgeon_id')
+        surgery_date = request.POST.get('surgery_date')
+        surgery_time = request.POST.get('surgery_time')
+        duration_hours = request.POST.get('duration_hours')
+        notes = request.POST.get('notes')
+        
+        if not organ_recipient:
+            messages.error(request, 'Please select an organ-recipient pair')
+            return redirect('core:create_surgery')
+        
+        organ_id, recipient_id = organ_recipient.split('_')
+        
+        try:
+            organ = Organ.objects.select_related('type_name').get(organ_id=organ_id)
+        except Organ.DoesNotExist:
+            messages.error(request, 'Organ not found')
+            return redirect('core:create_surgery')
+        
+        if organ.status != 'Allocated':
+            messages.error(request, f'Organ must be Allocated. Current status: {organ.status}')
+            return redirect('core:create_surgery')
+        
+        if not HospitalCapabilities.objects.filter(
+            hospital_id=hospital_id,
+            type_name=organ.type_name
+        ).exists():
+            messages.error(request, 'Selected hospital cannot perform this organ type transplant')
+            return redirect('core:create_surgery')
+        
+        try:
+            surgeon = MedicalStaff.objects.get(staff_id=surgeon_id)
+            if str(surgeon.hospital_id) != str(hospital_id):
+                messages.error(request, 'Surgeon is not affiliated with selected hospital')
+                return redirect('core:create_surgery')
+        except MedicalStaff.DoesNotExist:
+            messages.error(request, 'Surgeon not found')
+            return redirect('core:create_surgery')
+        
+        if not OrganAllocation.objects.filter(
+            organ_id=organ_id,
+            recipient_id=recipient_id,
+            status='Accepted'
+        ).exists():
+            messages.error(request, 'No accepted allocation found for this organ-recipient pair')
+            return redirect('core:create_surgery')
+        
+        surg_date = datetime.strptime(surgery_date, '%Y-%m-%d').date()
+        if surg_date < date.today():
+            messages.error(request, 'Surgery date cannot be in the past')
+            return redirect('core:create_surgery')
+        
         try:
             Surgery.objects.create(
-                hospital_id=request.POST.get('hospital_id'),
-                organ_id=request.POST.get('organ_id'),
-                recipient_id=request.POST.get('recipient_id'),
-                primary_surgeon_id=request.POST.get('surgeon_id'),
-                surgery_date=request.POST.get('surgery_date'),
-                surgery_time=request.POST.get('surgery_time'),
-                outcome='Success',  # Default, can be updated later
-                notes=request.POST.get('notes')
+                hospital_id=hospital_id,
+                organ_id=organ_id,
+                recipient_id=recipient_id,
+                primary_surgeon_id=surgeon_id,
+                surgery_date=surgery_date,
+                surgery_time=surgery_time,
+                duration_hours=duration_hours,
+                outcome='Success',
+                notes=notes
             )
-            messages.success(request, 'Surgery scheduled! Trigger auto-created follow-up appointment!')
+            messages.success(request, '🎉 Surgery scheduled! Trigger fired and completed 5 automatic actions!')
             return redirect('core:surgery_list')
         except Exception as e:
-            messages.error(request, f'Error: {str(e)}')
+            messages.error(request, f'Error creating surgery: {str(e)}')
+    
+    organ_recipient_pairs = []
+    
+    accepted_allocations = OrganAllocation.objects.filter(
+        status='Accepted',
+        organ__status='Allocated'
+    ).select_related('organ', 'organ__donor', 'organ__type_name', 'recipient')
+    
+    for alloc in accepted_allocations:
+        organ_recipient_pairs.append({
+            'organ': alloc.organ,
+            'recipient': alloc.recipient,
+        })
     
     context = {
         'hospitals': Hospital.objects.all(),
-        'organs': Organ.objects.filter(status='Allocated'),
-        'recipients': Recipient.objects.filter(status='Waiting'),
-        'surgeons': MedicalStaff.objects.filter(specialization='Transplant_Surgeon'),
+        'organ_recipient_pairs': organ_recipient_pairs,
+        'surgeons': MedicalStaff.objects.filter(
+            specialization='Transplant_Surgeon'
+        ).select_related('hospital').order_by('hospital__name', 'name'),
+        'today': date.today().strftime('%Y-%m-%d'),
     }
     return render(request, 'core/surgery_form.html', context)
 

@@ -4,6 +4,10 @@
 <style>
     .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
     .allocation-info { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+    .deadline-warning { padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+    .deadline-ok { background: #d4edda; color: #155724; }
+    .deadline-soon { background: #fff3cd; color: #856404; }
+    .deadline-passed { background: #f8d7da; color: #721c24; }
     .btn-group { display: flex; gap: 15px; margin-top: 30px; }
     .btn { padding: 15px 40px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; font-weight: bold; }
     .btn-accept { background: #28a745; color: white; }
@@ -16,21 +20,42 @@
 
 <h2>📋 Respond to Allocation #{{ allocation.allocation_id }}</h2>
 
+{% if messages %}
+    {% for message in messages %}
+        <div style="padding: 15px; background: {% if 'success' in message.tags %}#d4edda{% else %}#f8d7da{% endif %}; 
+                    color: {% if 'success' in message.tags %}#155724{% else %}#721c24{% endif %}; 
+                    border-radius: 5px; margin-bottom: 20px;">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+{% if allocation.status != 'Pending' %}
+    <div style="background: #f8d7da; padding: 20px; border-radius: 8px; margin-bottom: 20px; color: #721c24;">
+        <strong>⚠️ This allocation has already been responded to.</strong>
+        <p>Current status: <strong>{{ allocation.status }}</strong></p>
+        <a href="{% url 'core:allocation_list' %}" style="color: #667eea;">← Return to Allocations</a>
+    </div>
+{% else %}
+
 <div class="allocation-info">
     <h3>Organ Details:</h3>
     <p><strong>Type:</strong> {{ allocation.organ.type_name.type_name }}</p>
+    <p><strong>Organ ID:</strong> #{{ allocation.organ.organ_id }}</p>
     <p><strong>Donor:</strong> {{ allocation.organ.donor.name }}</p>
     <p><strong>Blood Type:</strong> {{ allocation.organ.donor.blood_type }}</p>
+    <p><strong>Status:</strong> {{ allocation.organ.status }}</p>
     
     <h3 style="margin-top: 20px;">Recipient Details:</h3>
     <p><strong>Name:</strong> {{ allocation.recipient.name }}</p>
     <p><strong>Blood Type:</strong> {{ allocation.recipient.blood_type }}</p>
-    <p><strong>Urgency:</strong> Level {{ allocation.recipient.medical_urgency_level }}</p>
+    <p><strong>Urgency Level:</strong> {{ allocation.recipient.medical_urgency_level }}</p>
+    <p><strong>Status:</strong> {{ allocation.recipient.status }}</p>
     
     <h3 style="margin-top: 20px;">Match Details:</h3>
     <p><strong>Match Score:</strong> {{ allocation.match_score }}</p>
-    <p><strong>Allocation Date:</strong> {{ allocation.allocation_date }}</p>
-    <p><strong>Response Deadline:</strong> {{ allocation.response_deadline }}</p>
+    <p><strong>Allocation Date:</strong> {{ allocation.allocation_date|date:"M d, Y H:i" }}</p>
+    <p><strong>Response Deadline:</strong> {{ allocation.response_deadline|date:"M d, Y H:i" }}</p>
 </div>
 
 <form method="post">
@@ -41,4 +66,7 @@
         <button type="submit" name="response" value="Rejected" class="btn btn-reject">✗ Reject Allocation</button>
     </div>
 </form>
+
+{% endif %}
+
 {% endblock %}

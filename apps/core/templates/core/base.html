@@ -66,32 +66,37 @@
             <nav>
                 {% if request.session.username %}
                     <span style="color: #666; margin-right: 15px;">👤 {{ request.session.username }} ({{ request.session.role }})</span>
-                    <a href="/">Dashboard</a>
                     
-                    {# All users can view organs and waitlist #}
-                    <a href="{% url 'core:available_organs' %}">Available Organs</a>
-                    <a href="{% url 'core:waitlist' %}">Waitlist</a>
-                    
-                    {# Medical Staff and Admin only #}
-                    {% if request.session.role == 'Medical_Staff' or request.session.role == 'Administrator' %}
-                        <a href="{% url 'core:donor_list' %}">Donors</a>
-                        <a href="{% url 'core:allocation_list' %}">Allocations</a>
-                        <a href="{% url 'core:surgery_list' %}">Surgeries</a>
+                    {% if request.session.role == 'Recipient' %}
+                        {# Recipients only see limited menu #}
+                        <a href="/">My Dashboard</a>
+                        <a href="{% url 'core:available_organs' %}">Available Organs</a>
+                        <a href="{% url 'core:allocation_list' %}">My Offers</a>
+                        <a href="{% url 'core:logout' %}">Logout</a>
+                    {% else %}
+                        {# All other roles see full menu #}
+                        <a href="/">Dashboard</a>
+                        <a href="{% url 'core:available_organs' %}">Available Organs</a>
+                        <a href="{% url 'core:waitlist' %}">Waitlist</a>
+                        
+                        {% if request.session.role == 'Medical_Staff' or request.session.role == 'Administrator' %}
+                            <a href="{% url 'core:donor_list' %}">Donors</a>
+                            <a href="{% url 'core:allocation_list' %}">Allocations</a>
+                            <a href="{% url 'core:surgery_list' %}">Surgeries</a>
+                        {% endif %}
+                        
+                        {% if request.session.role != 'Recipient' %}
+                            <a href="{% url 'core:recipient_list' %}">Recipients</a>
+                            <a href="{% url 'core:critical_recipients' %}">Critical</a>
+                            <a href="{% url 'core:hospital_performance' %}">Reports</a>
+                        {% endif %}
+                        
+                        {% if request.session.role == 'Administrator' %}
+                            <a href="/admin/">Admin Panel</a>
+                        {% endif %}
+                        
+                        <a href="{% url 'core:logout' %}">Logout</a>
                     {% endif %}
-                    
-                    {# Coordinator, Medical Staff, and Admin #}
-                    {% if request.session.role != 'Recipient' %}
-                        <a href="{% url 'core:recipient_list' %}">Recipients</a>
-                        <a href="{% url 'core:critical_recipients' %}">Critical</a>
-                        <a href="{% url 'core:hospital_performance' %}">Reports</a>
-                    {% endif %}
-                    
-                    {# Admin only #}
-                    {% if request.session.role == 'Administrator' %}
-                        <a href="/admin/">Admin Panel</a>
-                    {% endif %}
-                    
-                    <a href="{% url 'core:logout' %}">Logout</a>
                 {% else %}
                     <a href="{% url 'core:login' %}">Login</a>
                     <a href="{% url 'core:register' %}">Register</a>

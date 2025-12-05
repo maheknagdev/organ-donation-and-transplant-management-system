@@ -199,7 +199,7 @@
     {% if request.session.role != 'Recipient' %}
         <a href="{% url 'core:active_waitlist_mysql_view' %}" style="background: #667eea; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">
             <div style="font-size: 2em;">📊</div>
-            <div style="margin-top: 10px;">MySQL Waitlist View</div>
+            <div style="margin-top: 10px;">Waitlist View</div>
         </a>
         
         <a href="{% url 'core:critical_recipients' %}" style="background: #dc3545; color: white; padding: 20px; border-radius: 8px; text-decoration: none; text-align: center;">

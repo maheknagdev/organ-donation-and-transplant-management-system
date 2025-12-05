@@ -25,6 +25,8 @@
             <th>Location</th>
             <th>Total Surgeries</th>
             <th>Successful</th>
+            <th>Complications</th>
+            <th>Failed</th>
             <th>Success Rate</th>
         </tr>
     </thead>
@@ -33,19 +35,27 @@
         <tr>
             <td><strong>{{ hospital.Hospital_Name }}</strong></td>
             <td>{{ hospital.City }}, {{ hospital.State }}</td>
-            <td>{{ hospital.Total_Surgeries }}</td>
-            <td>{{ hospital.Successful_Surgeries }}</td>
+            <td>{{ hospital.Total_Surgeries|default:"0" }}</td>
+            <td>{{ hospital.Successful_Surgeries|default:"0" }}</td>
+            <td>{{ hospital.Surgeries_With_Complications|default:"0" }}</td>
+            <td>{{ hospital.Failed_Surgeries|default:"0" }}</td>
             <td>
-                <span class="success-rate 
-                    {% if hospital.Success_Rate >= 80 %}rate-high
-                    {% elif hospital.Success_Rate >= 60 %}rate-medium
-                    {% else %}rate-low{% endif %}">
-                    {{ hospital.Success_Rate }}%
-                </span>
+                {% if hospital.Success_Rate_Percentage is not None %}
+                    <span class="success-rate 
+                        {% if hospital.Success_Rate_Percentage >= 80 %}rate-high
+                        {% elif hospital.Success_Rate_Percentage >= 60 %}rate-medium
+                        {% else %}rate-low{% endif %}">
+                        {{ hospital.Success_Rate_Percentage|floatformat:1 }}%
+                    </span>
+                {% else %}
+                    <span style="color: #999;">0.0%</span>
+                {% endif %}
             </td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" style="text-align: center; padding: 40px;">No hospital data available</td></tr>
+        <tr><td colspan="7" style="text-align: center; padding: 40px;">
+            No hospital data available. Schedule surgeries to see performance metrics.
+        </td></tr>
         {% endfor %}
     </tbody>
 </table>

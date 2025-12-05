@@ -1,0 +1,82 @@
+{% extends 'core/base.html' %}
+{% block title %}My Dashboard{% endblock %}
+{% block content %}
+<style>
+    .patient-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+    .info-card { background: white; border: 2px solid #e0e0e0; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    .info-card h3 { color: #667eea; margin-bottom: 15px; }
+    .status-badge { padding: 8px 15px; border-radius: 20px; font-weight: bold; display: inline-block; }
+    .status-waiting { background: #fff3cd; color: #856404; }
+    .status-transplanted { background: #d4edda; color: #155724; }
+    .no-data { text-align: center; padding: 30px; color: #999; background: #f8f9fa; border-radius: 8px; }
+    .action-btn { display: inline-block; background: #667eea; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; margin-top: 10px; }
+    .action-btn:hover { background: #764ba2; }
+    .pending-offer { background: #d4edda; border-left: 4px solid #28a745; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+</style>
+
+<div class="patient-header">
+    <h2>👤 Welcome, {{ my_recipient.name }}</h2>
+    <p style="margin-top: 10px; opacity: 0.9;">Patient ID: {{ my_recipient.recipient_id }} | Blood Type: {{ my_recipient.blood_type }}</p>
+</div>
+
+<div class="info-card">
+    <h3>📊 My Status</h3>
+    <p><strong>Current Status:</strong> <span class="status-badge status-{{ my_recipient.status|lower }}">{{ my_recipient.status }}</span></p>
+    <p><strong>Medical Urgency:</strong> Level {{ my_recipient.medical_urgency_level }} of 5</p>
+    <p><strong>Primary Diagnosis:</strong> {{ my_recipient.primary_diagnosis }}</p>
+    <p><strong>Registration Date:</strong> {{ my_recipient.registration_date }}</p>
+</div>
+
+{% if my_allocations %}
+<div class="info-card">
+    <h3>📬 Pending Organ Offers ({{ my_allocations.count }})</h3>
+    {% for alloc in my_allocations %}
+    <div class="pending-offer">
+        <strong>{{ alloc.organ.type_name.type_name }}</strong> - Match Score: {{ alloc.match_score }}<br>
+        <small>Deadline: {{ alloc.response_deadline|date:"M d, Y H:i" }}</small><br>
+        <a href="{% url 'core:respond_to_allocation' alloc.allocation_id %}" class="action-btn">Respond to Offer</a>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if my_waitlist %}
+<div class="info-card">
+    <h3>⏳ My Waitlist Status</h3>
+    {% for entry in my_waitlist %}
+    <p>
+        <strong>{{ entry.type_name.type_name }}:</strong><br>
+        Priority Score: <strong>{{ entry.priority_score }}</strong> | 
+        Waiting since: {{ entry.wait_list_date }} 
+        ({{ entry.wait_list_date|timesince }} ago)
+    </p>
+    {% endfor %}
+</div>
+{% else %}
+<div class="no-data">
+    <p>You are not currently on any waitlist</p>
+</div>
+{% endif %}
+
+{% if my_surgeries %}
+<div class="info-card">
+    <h3>🏥 My Transplant History</h3>
+    {% for surgery in my_surgeries %}
+    <p>
+        <strong>{{ surgery.organ.type_name.type_name }} Transplant</strong><br>
+        Date: {{ surgery.surgery_date }} | 
+        Hospital: {{ surgery.hospital.name }} | 
+        Outcome: <strong>{{ surgery.outcome }}</strong><br>
+        <a href="{% url 'core:recipient_history' my_recipient.recipient_id %}" style="color: #667eea;">View Full History</a>
+    </p>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="info-card">
+    <h3>💊 Available Organs in System</h3>
+    <p>There are currently <strong>{{ total_available_organs }}</strong> organs available for transplant.</p>
+    <a href="{% url 'core:available_organs' %}" class="action-btn">View Available Organs</a>
+</div>
+
+{% endblock %}

@@ -6,15 +6,37 @@
     .form-group { margin-bottom: 20px; }
     label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
     input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-    .btn { padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .btn { padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; }
     .btn:hover { background: #764ba2; }
     .back-link { color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block; }
     .alert { background: #fff3cd; padding: 15px; border-radius: 5px; margin-bottom: 20px; color: #856404; }
+    .info-box { background: #d1ecf1; padding: 15px; border-radius: 5px; margin-bottom: 20px; color: #0c5460; }
 </style>
 
 <a href="{% url 'core:surgery_list' %}" class="back-link">← Back to Surgeries</a>
 
 <h2>🏥 Schedule Surgery</h2>
+
+<div class="alert">
+    ⚠️ <strong>after_surgery_insert Trigger</strong> will automatically execute 5 actions:
+    <ul style="margin: 10px 0 0 20px;">
+        <li>✓ Update organ status → 'Transplanted'</li>
+        <li>✓ Update recipient status → 'Transplanted'</li>
+        <li>✓ Remove recipient from ALL waitlists</li>
+        <li>✓ Mark allocation → 'Accepted'</li>
+        <li>✓ Create follow-up appointment (1 week after surgery)</li>
+    </ul>
+</div>
+
+<div class="info-box">
+    <strong>📋 Constraints Applied:</strong>
+    <ul style="margin: 5px 0 0 20px;">
+        <li>Only ALLOCATED organs with ACCEPTED allocations shown</li>
+        <li>Hospital capabilities verified in backend</li>
+        <li>Surgeon-hospital affiliation checked</li>
+        <li>Surgery date cannot be in past</li>
+    </ul>
+</div>
 
 {% if messages %}
     {% for message in messages %}
@@ -26,66 +48,93 @@
     {% endfor %}
 {% endif %}
 
+{% if not organ_recipient_pairs %}
+    <div style="padding: 40px; text-align: center; background: #f8f9fa; border-radius: 8px;">
+        <h3>❌ No Organs Ready for Surgery</h3>
+        <p style="margin: 15px 0;">Requirements:</p>
+        <ul style="text-align: left; max-width: 400px; margin: 0 auto;">
+            <li>Organ must be <strong>Allocated</strong></li>
+            <li>Allocation must be <strong>Accepted</strong></li>
+            <li>Recipient must be <strong>Waiting</strong></li>
+        </ul>
+        <p style="margin-top: 20px;">
+            <a href="{% url 'core:allocation_list' %}" style="color: #667eea; font-weight: bold;">
+                → View Allocations
+            </a> to accept pending offers first.
+        </p>
+    </div>
+{% else %}
+
 <form method="post">
     {% csrf_token %}
+    
+    <div class="form-group">
+        <label>Organ → Recipient Pair * <small>(Only Allocated with Accepted Allocation)</small></label>
+        <select name="organ_recipient" required>
+            <option value="">Select Organ and Matching Recipient</option>
+            {% for pair in organ_recipient_pairs %}
+            <option value="{{ pair.organ.organ_id }}_{{ pair.recipient.recipient_id }}">
+                🫀 {{ pair.organ.type_name.type_name }} #{{ pair.organ.organ_id }} 
+                (Donor: {{ pair.organ.donor.name }}, {{ pair.organ.donor.blood_type }}) 
+                → 
+                👤 {{ pair.recipient.name }} ({{ pair.recipient.blood_type }}, Urgency: {{ pair.recipient.medical_urgency_level }})
+            </option>
+            {% endfor %}
+        </select>
+        <small style="color: #666;">{{ organ_recipient_pairs|length }} organ(s) ready for surgery</small>
+    </div>
     
     <div class="form-group">
         <label>Hospital *</label>
         <select name="hospital_id" required>
             <option value="">Select Hospital</option>
             {% for hospital in hospitals %}
-            <option value="{{ hospital.hospital_id }}">{{ hospital.name }} - {{ hospital.city }}, {{ hospital.state }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    
-    <div class="form-group">
-        <label>Organ (Allocated) *</label>
-        <select name="organ_id" required>
-            <option value="">Select Organ</option>
-            {% for organ in organs %}
-            <option value="{{ organ.organ_id }}">
-                {{ organ.type_name.type_name }} #{{ organ.organ_id }} - Donor: {{ organ.donor.name }}
+            <option value="{{ hospital.hospital_id }}">
+                {{ hospital.name }} - {{ hospital.city }}, {{ hospital.state }}
             </option>
             {% endfor %}
         </select>
+        <small style="color: #666;">Hospital capability will be validated</small>
     </div>
     
     <div class="form-group">
-        <label>Recipient *</label>
-        <select name="recipient_id" required>
-            <option value="">Select Recipient</option>
-            {% for recipient in recipients %}
-            <option value="{{ recipient.recipient_id }}">{{ recipient.name }} ({{ recipient.blood_type }})</option>
-            {% endfor %}
-        </select>
-    </div>
-    
-    <div class="form-group">
-        <label>Primary Surgeon *</label>
+        <label>Primary Surgeon * <small>(Transplant Surgeons only)</small></label>
         <select name="surgeon_id" required>
             <option value="">Select Surgeon</option>
             {% for surgeon in surgeons %}
-            <option value="{{ surgeon.staff_id }}">{{ surgeon.name }} - {{ surgeon.hospital.name }}</option>
+            <option value="{{ surgeon.staff_id }}">
+                {{ surgeon.name }} - {{ surgeon.hospital.name }}
+            </option>
             {% endfor %}
         </select>
+        <small style="color: #666;">Surgeon-hospital affiliation will be validated</small>
     </div>
     
     <div class="form-group">
         <label>Surgery Date *</label>
-        <input type="date" name="surgery_date" required>
+        <input type="date" name="surgery_date" required min="{{ today }}" value="{{ today }}">
+        <small style="color: #666;">Cannot be in the past</small>
     </div>
     
     <div class="form-group">
         <label>Surgery Time *</label>
-        <input type="time" name="surgery_time" required>
+        <input type="time" name="surgery_time" required value="09:00">
+    </div>
+
+    <div class="form-group">
+        <label>Expected Duration (hours) *</label>
+        <input type="number" name="duration_hours" step="0.5" min="1" max="24" required value="4.5" placeholder="e.g., 4.5">
+        <small style="color: #666;">Typical: Heart 5-6hrs, Liver 6-8hrs, Kidney 3-5hrs</small>
     </div>
     
     <div class="form-group">
-        <label>Notes</label>
-        <textarea name="notes" rows="3"></textarea>
+        <label>Surgical Notes</label>
+        <textarea name="notes" rows="3" placeholder="Procedure details, special considerations, team notes..."></textarea>
     </div>
     
-    <button type="submit" class="btn">Schedule Surgery</button>
+    <button type="submit" class="btn">🏥 Schedule Surgery (Triggers 5 Automatic Actions)</button>
 </form>
+
+{% endif %}
+
 {% endblock %}

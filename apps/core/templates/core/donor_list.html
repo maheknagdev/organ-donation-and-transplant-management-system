@@ -37,6 +37,7 @@
             <th>Type</th>
             <th>Status</th>
             <th>Registration Date</th>
+            <th>Organs Donated</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -51,12 +52,15 @@
                 <span class="badge badge-{{ donor.status|lower }}">{{ donor.status }}</span>
             </td>
             <td>{{ donor.registration_date }}</td>
+           <td>
+                <strong>{{ donor.organ_set.count }}</strong> organ{{ donor.organ_set.count|pluralize }}
+            </td>
             <td>
                 <a href="{% url 'core:update_donor' donor.donor_id %}" style="color: #667eea;">Edit</a>
             </td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" style="text-align: center; padding: 40px;">No donors registered</td></tr>
+        <tr><td colspan="8" style="text-align: center; padding: 40px;">No donors registered</td></tr>
         {% endfor %}
     </tbody>
 </table>

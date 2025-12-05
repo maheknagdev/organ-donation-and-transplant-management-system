@@ -70,11 +70,17 @@
                         Priority Score
                     </a>
                 {% endif %}
-                <a href="{% url 'core:remove_from_waitlist' entry.recipient.recipient_id entry.type_name.type_name %}" 
-                   class="remove-btn"
-                   onclick="return confirm('Remove {{ entry.recipient.name }} from waitlist?')">
-                    Remove
-                </a>
+                
+                {% if request.session.role == 'Coordinator' or request.session.role == 'Administrator' %}
+                    {% if request.session.role == 'Medical_Staff' or request.session.role == 'Coordinator' or request.session.role == 'Administrator' %}
+                    <span style="color: #ccc; margin: 0 8px;">|</span>
+                    {% endif %}
+                    <a href="{% url 'core:remove_from_waitlist' entry.recipient.recipient_id entry.type_name.type_name %}" 
+                    class="remove-btn"
+                    onclick="return confirm('Remove {{ entry.recipient.name }} from waitlist?')">
+                        Remove
+                    </a>
+                {% endif %}
             </td>
         </tr>
         {% empty %}
