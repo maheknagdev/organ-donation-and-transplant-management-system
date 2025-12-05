@@ -2,7 +2,8 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
-
+import pymysql 
+pymysql.version_info = (2, 2, 4, "final", 0)
 
 def main():
     """Run administrative tasks."""

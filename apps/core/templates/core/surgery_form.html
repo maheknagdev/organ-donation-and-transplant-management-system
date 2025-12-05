@@ -17,26 +17,6 @@
 
 <h2>🏥 Schedule Surgery</h2>
 
-<div class="alert">
-    ⚠️ <strong>after_surgery_insert Trigger</strong> will automatically execute 5 actions:
-    <ul style="margin: 10px 0 0 20px;">
-        <li>✓ Update organ status → 'Transplanted'</li>
-        <li>✓ Update recipient status → 'Transplanted'</li>
-        <li>✓ Remove recipient from ALL waitlists</li>
-        <li>✓ Mark allocation → 'Accepted'</li>
-        <li>✓ Create follow-up appointment (1 week after surgery)</li>
-    </ul>
-</div>
-
-<div class="info-box">
-    <strong>📋 Constraints Applied:</strong>
-    <ul style="margin: 5px 0 0 20px;">
-        <li>Only ALLOCATED organs with ACCEPTED allocations shown</li>
-        <li>Hospital capabilities verified in backend</li>
-        <li>Surgeon-hospital affiliation checked</li>
-        <li>Surgery date cannot be in past</li>
-    </ul>
-</div>
 
 {% if messages %}
     {% for message in messages %}
