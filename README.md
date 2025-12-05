@@ -281,7 +281,7 @@ Sample data includes pre-configured test accounts:
 ## 📂 Project Structure
 
 ```
-organ-donation-system/
+organ-donation-and-transplant-management-system/
 ├── apps/
 │   ├── __init__.py
 │   └── core/
