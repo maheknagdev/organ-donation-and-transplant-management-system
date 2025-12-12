@@ -1,4 +1,4 @@
-# 🏥 Organ Donation and Transplant Management System
+# 🏥 LifeLink - an organ transplant management system
 
 ## 🎯 System Overview
 
